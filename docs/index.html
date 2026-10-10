@@ -187,6 +187,65 @@
 
     <div class="rule" role="presentation"></div>
 
+    <!-- Live demonstration -->
+    <section class="section" id="demo">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Live demonstration</p>
+          <h2>Watch a downloads folder sort itself.</h2>
+          <p class="section-sub">Files land in Downloads, then move themselves into the matching folder. No clicking, no dragging.</p>
+        </div>
+
+        <div class="demo" data-demo aria-hidden="true">
+          <div class="demo-source">
+            <div class="demo-source-bar">
+              <span class="demo-lights"><i></i><i></i><i></i></span>
+              <span class="demo-source-title">~/Downloads</span>
+            </div>
+            <div class="demo-source-body">
+              <span class="demo-file" data-target="documents" data-ext="pdf">report_final_v2.pdf</span>
+              <span class="demo-file" data-target="images" data-ext="jpg">IMG_0421.jpg</span>
+              <span class="demo-file" data-target="archives" data-ext="zip">archive.zip</span>
+              <span class="demo-file" data-target="documents" data-ext="md">notes.md</span>
+              <span class="demo-file" data-target="other" data-ext="exe">setup.exe</span>
+              <span class="demo-file" data-target="images" data-ext="png">screenshot.png</span>
+            </div>
+          </div>
+
+          <div class="demo-dest">
+            <div class="demo-folder" data-folder="documents">
+              <span class="demo-folder-name">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H3Z" stroke="currentColor" stroke-width="1.7"/></svg>
+                Documents
+              </span>
+              <span class="demo-folder-stack"></span>
+            </div>
+            <div class="demo-folder" data-folder="images">
+              <span class="demo-folder-name">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="m6 16 4-4 3 3 2-2 3 3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+                Images
+              </span>
+              <span class="demo-folder-stack"></span>
+            </div>
+            <div class="demo-folder" data-folder="archives">
+              <span class="demo-folder-name">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M4 6h16v4H4ZM4 10h16v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 14h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                Archives
+              </span>
+              <span class="demo-folder-stack"></span>
+            </div>
+            <div class="demo-folder" data-folder="other">
+              <span class="demo-folder-name">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H3Z" stroke="currentColor" stroke-width="1.7"/></svg>
+                Other
+              </span>
+              <span class="demo-folder-stack"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- At a glance -->
     <section class="section" id="highlights">
       <div class="container">
