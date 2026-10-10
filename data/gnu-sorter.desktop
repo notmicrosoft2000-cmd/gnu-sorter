@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=GNU Sorter
+GenericName=Folder Sorter
+Comment=Sort any folder automatically
+Exec=gnu-sorter --gui
+Icon=gnu-sorter
+Terminal=false
+Categories=Utility;FileTools;System;
+Keywords=sort;organize;folder;download;tidy;
+StartupNotify=true
+StartupWMClass=io.neptunepc.GNUSorter

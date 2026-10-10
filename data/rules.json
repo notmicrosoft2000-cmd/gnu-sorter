@@ -1,0 +1,175 @@
+[
+  {
+    "name": "Photos/Screenshots",
+    "extensions": [],
+    "match_name_regex": "screenshot|ibis|scree.?shot|capture"
+  },
+  {
+    "name": "Photos",
+    "extensions": [
+      "jpg",
+      "jpeg",
+      "png",
+      "gif",
+      "webp",
+      "heic",
+      "bmp",
+      "tiff",
+      "avif",
+      "svg",
+      "ico",
+      "raw",
+      "psd",
+      "xcf"
+    ]
+  },
+  {
+    "name": "Videos",
+    "extensions": [
+      "mp4",
+      "mkv",
+      "webm",
+      "mov",
+      "avi",
+      "flv",
+      "m4v",
+      "wmv",
+      "mpeg",
+      "mpg",
+      "3gp",
+      "ts",
+      "m2ts"
+    ]
+  },
+  {
+    "name": "Music",
+    "extensions": [
+      "mp3",
+      "flac",
+      "wav",
+      "ogg",
+      "m4a",
+      "aac",
+      "opus",
+      "wma",
+      "mid",
+      "midi"
+    ]
+  },
+  {
+    "name": "Documents",
+    "extensions": [
+      "pdf",
+      "doc",
+      "docx",
+      "odt",
+      "txt",
+      "md",
+      "rtf",
+      "xls",
+      "xlsx",
+      "csv",
+      "ppt",
+      "pptx",
+      "odp",
+      "epub"
+    ]
+  },
+  {
+    "name": "Archives",
+    "extensions": [
+      "tar.gz",
+      "tar.xz",
+      "tar.bz2",
+      "tar.zst",
+      "tgz",
+      "zip",
+      "tar",
+      "gz",
+      "xz",
+      "bz2",
+      "7z",
+      "rar",
+      "zst",
+      "lz4"
+    ]
+  },
+  {
+    "name": "Installers",
+    "extensions": [
+      "appimage",
+      "deb",
+      "rpm",
+      "apk",
+      "exe",
+      "msi",
+      "dmg",
+      "pkg",
+      "run",
+      "flatpak",
+      "flatpakref"
+    ]
+  },
+  {
+    "name": "ISOs",
+    "extensions": [
+      "iso",
+      "img"
+    ]
+  },
+  {
+    "name": "Code",
+    "extensions": [
+      "py",
+      "js",
+      "ts",
+      "jsx",
+      "tsx",
+      "html",
+      "css",
+      "go",
+      "rs",
+      "c",
+      "cpp",
+      "h",
+      "hpp",
+      "java",
+      "json",
+      "sh",
+      "fish",
+      "yaml",
+      "yml",
+      "toml",
+      "xml",
+      "sql",
+      "lua",
+      "rb",
+      "kt",
+      "swift",
+      "php",
+      "vue",
+      "svelte"
+    ]
+  },
+  {
+    "name": "Fonts",
+    "extensions": [
+      "ttf",
+      "otf",
+      "woff",
+      "woff2",
+      "eot"
+    ]
+  },
+  {
+    "name": "Torrents",
+    "extensions": [
+      "torrent"
+    ]
+  },
+  {
+    "name": "Wallpapers",
+    "extensions": [],
+    "match_name_regex": "wallpaper|white.?sur"
+  }
+]

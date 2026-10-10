@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=inode/directory;
+Actions=sortHere;
+Icon=gnu-sorter
+X-KDE-Priority=TopLevel
+
+[Desktop Action sortHere]
+Name=Sort with GNU Sorter
+Icon=gnu-sorter
+Exec=gnu-sorter --sweep --root %f
