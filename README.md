@@ -16,9 +16,13 @@
 
 ## Screenshots
 
-| Folders | Rules (split view) | Wizard + Advanced | Activity/Settings/About |
+| Folders | Rules (split view) | Advanced editor | Activity |
 |---|---|---|---|
-| ![Folders](docs/images/1-folders.png) | ![Rules](docs/images/2-rules.png) | ![Wizard/Advanced](docs/images/2a-rules.png) | ![Activity/Settings/About](docs/images/3-activity.png) |
+| ![Folders](docs/images/app-folders.png) | ![Rules](docs/images/app-rules.png) | ![Advanced editor](docs/images/app-advanced-rules.png) | ![Activity](docs/images/app-activity.png) |
+
+| Settings | About |
+|---|---|
+| ![Settings](docs/images/app-settings.png) | ![About](docs/images/app-about.png) |
 
 See more: [Website](https://notmicrosoft2000-cmd.github.io/gnu-sorter/) · [Documentation](https://notmicrosoft2000-cmd.github.io/gnu-sorter/docs.html)
 
