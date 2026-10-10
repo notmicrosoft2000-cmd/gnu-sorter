@@ -133,6 +133,10 @@ class MainWindow(Adw.ApplicationWindow):
         self._add_window_actions()
 
         self.set_title(APP_NAME)
+        try:
+            self.set_icon_name("gnu-sorter")
+        except Exception:
+            pass
         self.set_default_size(940, 640)
 
         header = Adw.HeaderBar()
@@ -221,6 +225,10 @@ class MainWindow(Adw.ApplicationWindow):
         about = Adw.AboutDialog()
         about.set_application_name(APP_NAME)
         about.set_application_icon("gnu-sorter")
+        try:
+            about.set_logo_icon_name("gnu-sorter")
+        except Exception:
+            pass
         about.set_developer_name(CREATOR)
         about.set_developers([CREATOR])
         about.set_version(__version__)
