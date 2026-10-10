@@ -30,4 +30,4 @@ echo "[setup] Downloading GNU Sorter..."
 git clone --quiet --depth 1 "$REPO_URL" "$WORK_DIR/gnu-sorter"
 
 echo "[setup] Running install.sh (user-local)..."
-"$WORK_DIR/gnu-sorter/install.sh" "$@"
+bash "$WORK_DIR/gnu-sorter/install.sh" "$@"
