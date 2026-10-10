@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explain - How GNU Sorter Works</title>
+    <link rel="icon" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-noise"></div>
+    
+    <nav class="nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <img src="icon.png" alt="GNU Sorter" class="nav-logo-img">
+                <span class="nav-logo-text">GNU Sorter</span>
+            </a>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="features.html" class="nav-link">Features</a>
+                <a href="screenshots.html" class="nav-link">Screenshots</a>
+                <a href="docs.html" class="nav-link">Docs</a>
+                <a href="explain.html" class="nav-link active">Explain</a>
+                <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" class="nav-link nav-cta">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero" style="padding-top: 120px;">
+        <div class="container">
+            <div style="text-align: center; margin-bottom: 3rem;">
+                <h1 class="hero-title">How <span class="gradient-text">GNU Sorter</span> Works</h1>
+                <p class="hero-subtitle">Simple explanation of the magic behind automatic file organization</p>
+            </div>
+        </div>
+    </header>
+
+    <section style="padding: 40px 0 60px;">
+        <div class="container">
+            <div class="glass-card" style="padding: 2rem; margin-bottom: 2rem;">
+                <h2 style="margin-bottom: 1rem;">What is GNU Sorter?</h2>
+                <p style="color: var(--text-secondary); line-height: 1.8;">GNU Sorter is a smart desktop app that automatically organizes files in folders by moving them into category subfolders based on rules you define. Think of it as your personal file clerk that sorts Downloads, Inbox folders, or any directory for you.</p>
+            </div>
+
+            <div class="glass-card" style="padding: 2rem; margin-bottom: 2rem;">
+                <h2 style="margin-bottom: 1rem;">The Core Idea</h2>
+                <div style="color: var(--text-secondary); line-height: 1.8;">
+                    <p style="margin-bottom: 1rem;">Instead of manually dragging files around, you tell GNU Sorter:</p>
+                    <ul style="padding-left: 2rem; margin-bottom: 1rem;">
+                        <li><strong>Which folders to watch</strong> (e.g., <code>~/Downloads</code>, <code>~/Documents/Inbox</code>)</li>
+                        <li><strong>What to look for</strong> (by file extension like <code>.jpg</code>, <code>.pdf</code> or by filename patterns)</li>
+                        <li><strong>Where to put them</strong> (create subfolders like <code>Photos/</code>, <code>Documents/</code>, <code>Comics/</code>)</li>
+                    </ul>
+                    <p>When a file appears in a watched folder, GNU Sorter moves it to the right category automatically.</p>
+                </div>
+            </div>
+
+            <div class="glass-card" style="padding: 2rem; margin-bottom: 2rem;">
+                <h2 style="margin-bottom: 1rem;">How It Works Step by Step</h2>
+                <div style="color: var(--text-secondary); line-height: 1.8;">
+                    <div style="margin-bottom: 1.5rem;">
+                        <strong style="color: var(--text-primary); display: block; margin-bottom: 0.5rem;">1. You add watched folders</strong>
+                        <p>Tell GNU Sorter which directories to monitor. Each folder can have its own rules or share the global template.</p>
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <strong style="color: var(--text-primary); display: block; margin-bottom: 0.5rem;">2. You define rules</strong>
+                        <p>Rules match files by extension (<code>*.cbz</code> → <code>Comics/</code>) or by name patterns (<code>*screenshot*</code> → <code>Photos/Screenshots/</code>). You can use the wizard, advanced editor, or presets.</p>
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <strong style="color: var(--text-primary); display: block; margin-bottom: 0.5rem;">3. It waits for new files</strong>
+                        <p>GNU Sorter watches for new/renamed files. On Linux it uses <code>inotify</code>; cross-platform it uses <code>watchdog</code> (with polling as fallback).</p>
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <strong style="color: var(--text-primary); display: block; margin-bottom: 0.5rem;">4. It checks if file is "ready"</strong>
+                        <p>Downloads often write in chunks. GNU Sorter skips in-progress files (<code>.part</code>, <code>.crdownload</code>, <code>.tmp</code>) and waits for the file size to stay stable for a few seconds.</p>
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <strong style="color: var(--text-primary); display: block; margin-bottom: 0.5rem;">5. It finds the matching rule</strong>
+                        <p>For each watched folder, GNU Sorter picks the most specific matching rule (first match). If no rule matches, it goes to <code>Needs-review/</code>.</p>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <strong style="color: var(--text-primary); display: block; margin-bottom: 0.5rem;">6. It moves safely</strong>
+                        <p>Creates the target folder if needed, avoids overwriting by renaming duplicates (<code>file (1).ext</code>), logs every move, and can undo it.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card" style="padding: 2rem; margin-bottom: 2rem;">
+                <h2 style="margin-bottom: 1rem;">Key Concepts</h2>
+                <div style="color: var(--text-secondary); line-height: 1.8; display: grid; gap: 1.5rem;">
+                    <div>
+                        <strong style="color: var(--text-primary);">Per-Folder Rules</strong>
+                        <p>Downloads can sort by extensions; your Comics folder can have its own rules. Folders can also "inherit" the shared default template.</p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-primary);">Template vs Custom</strong>
+                        <p>The default <code>rules.json</code> is your shared template. When you customize a specific folder, GNU Sorter stores its rules in <code>roots.d/</code> separately.</p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-primary);">Stability Window</strong>
+                        <p>Prevents moving partially downloaded files. By default it waits ~3 seconds with unchanged file size.</p>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-primary);">Undo Journal</strong>
+                        <p>Every move is recorded in a history log. You can undo the last move(s) anytime from GUI or CLI.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card" style="padding: 2rem;">
+                <h2 style="margin-bottom: 1rem;">Modes of Operation</h2>
+                <div style="color: var(--text-secondary); line-height: 1.8; display: grid; gap: 1rem;">
+                    <div><strong style="color: var(--text-primary);">GUI</strong> — Modern GTK4/libadwaita interface with split-view rules editor, wizard, and about dialog.</div>
+                    <div><strong style="color: var(--text-primary);">Background Watcher</strong> — Runs silently, auto-sorting as files appear. Can be enabled at login via systemd (Linux).</div>
+                    <div><strong style="color: var(--text-primary);">One-Off Sweep</strong> — Sort existing files in watched folders right now with <code>--sweep</code>.</div>
+                    <div><strong style="color: var(--text-primary);">CLI</strong> — Scriptable: add/remove rules/folders, detach/attach per-folder rules, undo, etc.</div>
+                    <div><strong style="color: var(--text-primary);">Tray Mode</strong> — Minimize to system tray with quick actions (Windows/Linux).</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="icon.png" alt="GNU Sorter" class="footer-logo">
+                    <span>GNU Sorter</span>
+                </div>
+                <div class="footer-links">
+                    <a href="index.html">Home</a>
+                    <a href="features.html">Features</a>
+                    <a href="screenshots.html">Screenshots</a>
+                    <a href="docs.html">Docs</a>
+                    <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter">GitHub</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 notmicrosoft2000-cmd • GPL-3.0 License</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
