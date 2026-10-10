@@ -8,6 +8,14 @@ license = {text = "GPL-3.0-only"}
 authors = [
   {name = "notmicrosoft2000-cmd", email = "notmicrosoft2000-cmd@users.noreply.github.com"}
 ]
+dependencies = [
+  "platformdirs",
+  "watchdog",
+  "pystray",
+]
+
+[project.optional-dependencies]
+tray = ["pystray"]
 
 [project.scripts]
 gnu-sorter = "gnu_sorter.cli:main"

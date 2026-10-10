@@ -21,6 +21,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     mode = p.add_argument_group("modes")
     mode.add_argument("--gui", action="store_true", help="open the graphical interface")
+    mode.add_argument("--tray", action="store_true", help="run in system tray (minimised background)")
     mode.add_argument("--sweep", action="store_true", help="sort folders now")
     mode.add_argument("--watch", action="store_true", help="watch folders and sort continuously")
     mode.add_argument("--undo", action="store_true", help="reverse the most recent moves")
@@ -252,6 +253,33 @@ def main(argv: list[str] | None = None) -> int:
         except KeyboardInterrupt:
             watcher.stop()
         return 0
+
+    if getattr(args, 'tray', False):
+        try:
+            from .tray import Tray
+            from .gui import run as run_gui, GNUSorterApp
+            import threading
+            import gi
+            gi.require_version("Gtk", "4.0")
+            gi.require_version("Adw", "1")
+            from gi.repository import Adw, GLib
+            Adw.init()
+            app = GNUSorterApp(cfg, migrated=migrated)
+            tray = Tray(
+                on_open_gui=lambda: GLib.idle_add(lambda: app.window.present() if app.window else app.activate()),
+                on_sort_now=lambda: GLib.idle_add(lambda: app.window.on_sort_now(None) if app.window else None),
+                on_start_watch=lambda: __import__('subprocess').run(['systemctl', '--user', 'start', 'gnu-sorter.service']) if False else None,
+                on_stop_watch=lambda: None,
+                on_quit=lambda: app.quit(),
+            )
+            def launch():
+                app.run([])
+            threading.Thread(target=launch, daemon=True).start()
+            tray.start()
+            return 0
+        except Exception as e:
+            print(f"Tray unavailable: {e}", file=sys.stderr)
+            return 1
 
     if args.sweep:
         stats = sorter.sweep(roots=roots, dry_run=dry)

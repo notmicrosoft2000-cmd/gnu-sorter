@@ -1,4 +1,4 @@
-"""Management + control of the GNU Sorter systemd user service."""
+"""Management + control of the GNU Sorter background service."""
 
 from __future__ import annotations
 
@@ -6,9 +6,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-UNIT_NAME = "gnu-sorter.service"
-UNIT_DIR = Path.home() / ".config" / "systemd" / "user"
-OLD_UNIT = "download-sorter.service"
+from . import platform
+
+if platform.is_linux() and platform.systemd_available():
+    UNIT_NAME = "gnu-sorter.service"
+    UNIT_DIR = Path.home() / ".config" / "systemd" / "user"
+    OLD_UNIT = "download-sorter.service"
+else:
+    UNIT_NAME = "gnu-sorter.service"
+    UNIT_DIR = Path.home() / ".config" / "systemd" / "user"
+    OLD_UNIT = "download-sorter.service"
 
 UNIT_TEMPLATE = """\
 [Unit]
@@ -27,6 +34,8 @@ WantedBy=default.target
 
 
 def _systemctl(*args: str) -> subprocess.CompletedProcess:
+    if not (platform.is_linux() and platform.systemd_available()):
+        return subprocess.CompletedProcess(args, 1, "", "systemd not available")
     return subprocess.run(["systemctl", "--user", *args],
                           capture_output=True, text=True)
 
@@ -36,19 +45,25 @@ def is_installed() -> bool:
 
 
 def is_active() -> bool:
-    return _systemctl("is-active", UNIT_NAME).stdout.strip() == "active"
+    res = _systemctl("is-active", UNIT_NAME)
+    return res.returncode == 0 and res.stdout.strip() == "active"
 
 
 def is_enabled() -> bool:
-    return _systemctl("is-enabled", UNIT_NAME).stdout.strip() == "enabled"
+    res = _systemctl("is-enabled", UNIT_NAME)
+    return res.returncode == 0 and res.stdout.strip() == "enabled"
 
 
 def install(exec_path: str | None = None) -> Path:
-    exec_path = exec_path or str(Path.home() / ".local" / "bin" / "gnu-sorter")
+    if platform.is_linux() and platform.systemd_available():
+        exec_path = exec_path or str(Path.home() / ".local" / "bin" / "gnu-sorter")
+    else:
+        exec_path = exec_path or "gnu-sorter"
     UNIT_DIR.mkdir(parents=True, exist_ok=True)
     unit = UNIT_DIR / UNIT_NAME
     unit.write_text(UNIT_TEMPLATE.format(exec_path=exec_path))
-    _systemctl("daemon-reload")
+    if platform.is_linux() and platform.systemd_available():
+        _systemctl("daemon-reload")
     return unit
 
 

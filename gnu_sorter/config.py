@@ -1,11 +1,11 @@
 """Configuration for GNU Sorter.
 
-Files live in ~/.config/gnu-sorter/ :
-    rules.json     — default ruleset ("template"): extensions + name regexes
-    roots.json     — the group of folders to sort (path + enabled flag)
-    roots.d/*.json — optional per-folder rulesets (folders that inherit the
-                     template have no file here)
-    settings.json  — timers, notifications, defaults
+Files live in the platform config/data dirs (see gnu_sorter.platform):
+    config_dir()/rules.json      — default ruleset ("template")
+    config_dir()/roots.json      — the group of folders to sort
+    config_dir()/roots.d/*.json  — optional per-folder rulesets
+    config_dir()/settings.json   — timers, notifications, defaults
+    data_dir()/history.log       — move journal (overridable via env)
 """
 
 from __future__ import annotations
@@ -17,15 +17,20 @@ import shutil
 from pathlib import Path
 
 from . import APP_NAME
+from . import platform
 
-CONFIG_DIR = Path(os.path.expanduser("~/.config/gnu-sorter"))
-DATA_DIR = Path(os.path.expanduser("~/.local/share/gnu-sorter"))
-HISTORY_LOG = Path(os.path.expanduser(
-    os.environ.get("GNU_SORTER_HISTORY", "~/.local/share/gnu-sorter/history.log")))
+CONFIG_DIR = platform.config_dir()
+DATA_DIR = platform.data_dir()
+LOG_DIR = platform.log_dir()
 
-# Where download-sorter kept its data (for one-way migration).
-OLD_CONFIG_DIR = Path(os.path.expanduser("~/.config/download-sorter"))
-OLD_HISTORY_LOG = Path(os.path.expanduser("~/.local/share/download-sorter/history.log"))
+_history_env = os.environ.get("GNU_SORTER_HISTORY")
+HISTORY_LOG = Path(_history_env) if _history_env else platform.default_history_path()
+
+# Where download-sorter kept its data (Linux only, for one-way migration).
+OLD_CONFIG_DIR = (Path(os.path.expanduser("~/.config/download-sorter"))
+                  if platform.is_linux() else None)
+OLD_HISTORY_LOG = (Path(os.path.expanduser("~/.local/share/download-sorter/history.log"))
+                   if platform.is_linux() else None)
 
 DEFAULT_RULES = [
     {"name": "Photos/Screenshots", "extensions": [],
@@ -223,7 +228,7 @@ class Config:
             self.save_roots(DEFAULT_ROOTS["roots"])
         if not self.settings_path.exists():
             self.save_settings(DEFAULT_SETTINGS)
-        if created and OLD_CONFIG_DIR.exists():
+        if created and OLD_CONFIG_DIR and OLD_CONFIG_DIR.exists():
             self._migrate()
             return True
         return False
@@ -250,6 +255,6 @@ class Config:
                     self.save_roots(roots)
             elif isinstance(data, list):
                 self.save_rules(data)
-        if OLD_HISTORY_LOG.exists():
+        if OLD_HISTORY_LOG and OLD_HISTORY_LOG.exists():
             HISTORY_LOG.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(OLD_HISTORY_LOG, HISTORY_LOG)
