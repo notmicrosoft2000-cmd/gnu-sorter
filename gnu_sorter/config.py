@@ -24,6 +24,8 @@ DATA_DIR = platform.data_dir()
 LOG_DIR = platform.log_dir()
 
 _history_env = os.environ.get("GNU_SORTER_HISTORY")
+
+# Kept for backwards compatibility; prefer Config(...).history_path at runtime.
 HISTORY_LOG = Path(_history_env) if _history_env else platform.default_history_path()
 
 # Where download-sorter kept its data (Linux only, for one-way migration).
@@ -120,10 +122,20 @@ def _write(path: Path, data) -> None:
 
 class Config:
     def __init__(self, config_dir: str | Path | None = None):
+        explicit = config_dir is not None
         self.dir = Path(config_dir) if config_dir else CONFIG_DIR
         self.rules_path = self.dir / "rules.json"
         self.roots_path = self.dir / "roots.json"
         self.settings_path = self.dir / "settings.json"
+        # The journal lives next to an explicitly configured directory so that
+        # --config fully isolates a run. The default install keeps it in the
+        # shared data dir (and honours the GNU_SORTER_HISTORY override).
+        if _history_env:
+            self.history_path = Path(_history_env)
+        elif explicit:
+            self.history_path = self.dir / "history.log"
+        else:
+            self.history_path = platform.default_history_path()
 
     # -- rules -----------------------------------------------------------
     def load_rules(self) -> list[dict]:
@@ -194,6 +206,8 @@ class Config:
         raw = data.get("roots", []) if isinstance(data, dict) else data
         if isinstance(raw, dict):                        # legacy double-nesting
             raw = raw.get("roots", [])
+        if not isinstance(raw, list):                    # broken shape → sane default
+            raw = []
         out = []
         for r in raw:
             if isinstance(r, str):
@@ -208,7 +222,9 @@ class Config:
     # -- settings --------------------------------------------------------
     def load_settings(self) -> dict:
         s = dict(DEFAULT_SETTINGS)
-        s.update(_read(self.settings_path, {}))
+        raw = _read(self.settings_path, {})
+        if isinstance(raw, dict):
+            s.update(raw)
         return s
 
     def save_settings(self, settings: dict) -> None:
@@ -256,5 +272,5 @@ class Config:
             elif isinstance(data, list):
                 self.save_rules(data)
         if OLD_HISTORY_LOG and OLD_HISTORY_LOG.exists():
-            HISTORY_LOG.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(OLD_HISTORY_LOG, HISTORY_LOG)
+            self.history_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(OLD_HISTORY_LOG, self.history_path)

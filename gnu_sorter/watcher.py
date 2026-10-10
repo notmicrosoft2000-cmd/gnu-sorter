@@ -207,7 +207,10 @@ class Watcher:
                         if looks_in_progress(entry.name):
                             continue
                         if is_stable(entry, 0):
-                            category = self.sorter.sort_file(entry, self._owner(entry) or self._roots[0],
+                            owner = self._owner(entry)
+                            if owner is None:
+                                continue
+                            category = self.sorter.sort_file(entry, owner,
                                                              dry_run=dry_run)
                             _notify(notify, f"Sorted → {category}/")
                 self.stop_event.wait(interval)

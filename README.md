@@ -20,9 +20,23 @@
 |---|---|---|---|
 | ![Folders](docs/images/1-folders.png) | ![Rules](docs/images/2-rules.png) | ![Wizard/Advanced](docs/images/2a-rules.png) | ![Activity/Settings/About](docs/images/3-activity.png) |
 
-See more: [Website screenshots](https://notmicrosoft2000-cmd.github.io/gnu-sorter/#screenshots)
+See more: [Website](https://notmicrosoft2000-cmd.github.io/gnu-sorter/) · [Documentation](https://notmicrosoft2000-cmd.github.io/gnu-sorter/docs.html)
 
 ## Installation (user-local)
+
+**One line** (downloads the installer script, clones the repo, and runs `install.sh`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash
+```
+
+Add `--service` to enable background watching on login:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash -s -- --service
+```
+
+Or install by hand:
 
 1. **Clone**: `git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git && cd gnu-sorter`
 2. **Install**: `./install.sh` (add `--service` to enable background watch on login)
@@ -68,6 +82,6 @@ gnu-sorter --undo-last 1
 - Issues: https://github.com/notmicrosoft2000-cmd/gnu-sorter/issues
 - License: **GPL-3.0**
 
-Windows port is in progress.
-EOF
-echo "ok"
+A native Windows version is available at
+https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows (WinUI 3, GPL-3.0).
+

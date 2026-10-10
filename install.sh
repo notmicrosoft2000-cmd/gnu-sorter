@@ -105,6 +105,4 @@ echo "  • Service: $SYSTEMD_USER/gnu-sorter.service"
 echo ""
 echo "Run: gnu-sorter --gui"
 echo "or:  systemctl --user {start,stop,status} gnu-sorter.service"
-EOF
-chmod +x /home/neptune/Documents/Projects/gnu-sorter/install.sh
-echo "ok"
+

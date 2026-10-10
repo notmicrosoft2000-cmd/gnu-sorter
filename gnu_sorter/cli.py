@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
 from pathlib import Path
 
 from . import __version__
@@ -243,7 +244,8 @@ def main(argv: list[str] | None = None) -> int:
     roots = [expand(r) for r in args.root] if args.root else None
 
     if args.undo:
-        return 0 if sorter.undo(dry_run=dry, limit=args.undo_last) >= 0 else 1
+        sorter.undo(dry_run=dry, limit=args.undo_last)
+        return 0
 
     if args.watch:
         from .watcher import Watcher
@@ -257,8 +259,7 @@ def main(argv: list[str] | None = None) -> int:
     if getattr(args, 'tray', False):
         try:
             from .tray import Tray
-            from .gui import run as run_gui, GNUSorterApp
-            import threading
+            from .gui import GNUSorterApp
             import gi
             gi.require_version("Gtk", "4.0")
             gi.require_version("Adw", "1")
@@ -266,17 +267,18 @@ def main(argv: list[str] | None = None) -> int:
             Adw.init()
             app = GNUSorterApp(cfg, migrated=migrated)
             tray = Tray(
-                on_open_gui=lambda: GLib.idle_add(lambda: app.window.present() if app.window else app.activate()),
-                on_sort_now=lambda: GLib.idle_add(lambda: app.window.on_sort_now(None) if app.window else None),
-                on_start_watch=lambda: __import__('subprocess').run(['systemctl', '--user', 'start', 'gnu-sorter.service']) if False else None,
-                on_stop_watch=lambda: None,
-                on_quit=lambda: app.quit(),
+                on_open_gui=lambda: GLib.idle_add(
+                    lambda: app.window.present() if app.window else app.activate()),
+                on_sort_now=lambda: GLib.idle_add(
+                    lambda: app.window.on_sort_now(None) if app.window else None),
+                on_start_watch=lambda: service.start(),
+                on_stop_watch=lambda: service.stop(),
+                on_quit=lambda: GLib.idle_add(app.quit),
             )
-            def launch():
-                app.run([])
-            threading.Thread(target=launch, daemon=True).start()
-            tray.start()
-            return 0
+            # GTK must own the main thread; pystray runs on its own thread.
+            app._tray = tray  # keep a reference alive for the app's lifetime
+            threading.Thread(target=tray.start, daemon=True).start()
+            return app.run([])
         except Exception as e:
             print(f"Tray unavailable: {e}", file=sys.stderr)
             return 1

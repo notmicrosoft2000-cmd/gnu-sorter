@@ -48,6 +48,4 @@ if [[ $PURGE -eq 0 ]]; then
   echo "  Config and history kept: ~/.config/gnu-sorter/, ~/.local/share/gnu-sorter/history.log"
   echo "  (use --purge to remove them too)"
 fi
-EOF
-chmod +x /home/neptune/Documents/Projects/gnu-sorter/uninstall.sh
-echo "ok"
+

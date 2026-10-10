@@ -23,5 +23,3 @@ gnu-sorter = "gnu_sorter.cli:main"
 [tool.setuptools.packages.find]
 include = ["gnu_sorter*"]
 exclude = ["tests*"]
-EOF
-echo "ok"

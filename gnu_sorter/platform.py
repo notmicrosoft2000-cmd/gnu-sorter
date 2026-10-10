@@ -32,7 +32,7 @@ def config_dir() -> Path:
 
 def data_dir() -> Path:
     if user_data_dir:
-        return Path(user_data_dir("gnu-sorter", roaming=True))
+        return Path(user_data_dir("gnu-sorter"))
     base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) if is_windows() else Path.home() / ".local" / "share"
     return base / "gnu-sorter"
 

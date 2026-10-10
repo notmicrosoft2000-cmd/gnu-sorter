@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How it works — GNU Sorter</title>
+  <meta name="description" content="How GNU Sorter organizes files: choose a folder, define rules, and let it sort — from the GUI or the command line.">
+  <meta name="theme-color" content="#0a0b0d">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="GNU Sorter — How it works">
+  <meta property="og:description" content="Three steps to a folder that sorts itself, plus the GUI and CLI workflows.">
+  <meta property="og:image" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/icon.png">
+  <meta property="og:url" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/how-it-works.html">
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // Apply the saved theme before paint to avoid a flash.
+    (function () {
+      try {
+        var stored = localStorage.getItem('gs-theme');
+        if (stored === 'light' || stored === 'dark') {
+          document.documentElement.setAttribute('data-theme', stored);
+        } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html" aria-label="GNU Sorter home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+            <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6a2 2 0 0 1 1.4.6L12 7h6.5A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5Z" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M7.5 12h7M7.5 15h4" stroke="#a3e635" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="brand-text">GNU Sorter</span>
+      </a>
+
+      <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+        <a href="index.html">Home</a>
+        <a href="features.html">Features</a>
+        <a href="how-it-works.html" aria-current="page">How it works</a>
+        <a href="download.html">Download</a>
+        <a href="docs.html">Documentation</a>
+        <a class="nav-external" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="icon-button theme-toggle" type="button" aria-label="Toggle color theme" aria-pressed="false">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <a class="btn btn-primary btn-sm" href="download.html">Get GNU Sorter</a>
+        <button class="icon-button menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="primary-nav">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Page hero -->
+    <section class="page-hero container">
+      <p class="kicker">How it works</p>
+      <h1>Three steps to a folder that sorts itself.</h1>
+      <p class="lede">
+        GNU Sorter replaces the repetitive part of keeping folders tidy. Set it up once,
+        then let the rules handle the routine — from the GUI or the command line.
+      </p>
+      <div class="page-hero-actions">
+        <a class="btn btn-primary" href="download.html">Get GNU Sorter</a>
+        <a class="btn btn-outline" href="features.html">Explore the features</a>
+      </div>
+    </section>
+
+    <div class="rule" role="presentation"></div>
+
+    <!-- The process -->
+    <section class="section" id="steps">
+      <h2 class="visually-hidden">The sorting process</h2>
+      <div class="container">
+        <ol class="steps">
+          <li class="step">
+            <span class="step-num">01</span>
+            <h3>Choose a directory</h3>
+            <p>Select the folder where incoming files should be organized.</p>
+          </li>
+          <li class="step">
+            <span class="step-num">02</span>
+            <h3>Define your rules</h3>
+            <p>Describe how matching files should be sorted and where they should go.</p>
+          </li>
+          <li class="step">
+            <span class="step-num">03</span>
+            <h3>Let the rules do the work</h3>
+            <p>Files are organized according to the workflow you configured.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <div class="rule" role="presentation"></div>
+
+    <!-- GUI vs CLI -->
+    <section class="section" id="interfaces">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Two ways to work</p>
+          <h2>Use the interface that suits your habits.</h2>
+          <p class="section-sub">Both modes work from the same configuration, so you can start visually and automate later.</p>
+        </div>
+
+        <div class="two-up">
+          <article class="panel">
+            <p class="panel-tag">GUI</p>
+            <h3>A visual way to configure sorting</h3>
+            <p>
+              Add folders, write rules, and apply presets from a desktop application. It is a comfortable
+              fit for setting things up the first time and for adjusting rules as your folders change.
+            </p>
+            <ul class="checklist">
+              <li>Manage folders and rules side by side</li>
+              <li>Guided rule setup plus an advanced editor</li>
+              <li>Presets to start from a sensible baseline</li>
+            </ul>
+          </article>
+
+          <article class="panel">
+            <p class="panel-tag">CLI</p>
+            <h3>A command-line workflow</h3>
+            <p>
+              For terminal users and automation, the same sorting can be driven from the command line.
+              Commands below are taken from the project README.
+            </p>
+            <div class="terminal" aria-label="Example command-line usage">
+              <div class="terminal-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+              <pre><code><span class="cmt"># preview rules</span>
+gnu-sorter --list-rules
+
+<span class="cmt"># sort a folder once</span>
+gnu-sorter --sweep
+
+<span class="cmt"># watch for new files</span>
+gnu-sorter --watch</code></pre>
+            </div>
+            <p class="tiny">Example usage from the README. Run <code>gnu-sorter --help</code> for the full, current reference.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final call to action -->
+    <section class="cta-final">
+      <div class="container cta-inner">
+        <h2>Start with one folder and one rule.</h2>
+        <p>Install GNU Sorter, point it at your Downloads folder, and watch the first batch land where it belongs.</p>
+        <div class="cta-actions">
+          <a class="btn btn-primary btn-lg" href="download.html">Get GNU Sorter</a>
+          <a class="btn btn-outline btn-lg" href="docs.html">Read the docs</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <h2 class="visually-hidden">Site footer</h2>
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="index.html" aria-label="GNU Sorter home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+              <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6a2 2 0 0 1 1.4.6L12 7h6.5A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5Z" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M7.5 12h7M7.5 15h4" stroke="#a3e635" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="brand-text">GNU Sorter</span>
+        </a>
+        <p>An advanced, open-source file-sorting utility for keeping your directories organized with custom rules.</p>
+      </div>
+
+      <nav class="footer-col" aria-label="Product">
+        <h3>Product</h3>
+        <a href="index.html">Home</a>
+        <a href="features.html">Features</a>
+        <a href="how-it-works.html" aria-current="page">How it works</a>
+        <a href="download.html">Download</a>
+      </nav>
+
+      <nav class="footer-col" aria-label="Resources">
+        <h3>Resources</h3>
+        <a href="docs.html">Documentation</a>
+        <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">GitHub repository</a>
+        <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows" target="_blank" rel="noopener">Windows build</a>
+        <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter/issues" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+
+      <nav class="footer-col" aria-label="Project">
+        <h3>Project</h3>
+        <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">Contribute</a>
+        <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">Source code</a>
+        <span class="muted">License: GPL-3.0</span>
+      </nav>
+    </div>
+
+    <div class="container footer-bottom">
+      <p>&copy; <span id="year">2026</span> notmicrosoft2000-cmd &middot; GNU Sorter &middot; GPL-3.0</p>
+      <p class="footer-tag">Your files. Your rules. Automatically organized.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

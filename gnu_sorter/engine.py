@@ -23,7 +23,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from .config import Config, HISTORY_LOG
+from .config import Config
 
 # suffixes that mean "still being written"
 IN_PROGRESS_SUFFIXES = (".part", ".crdownload", ".download", ".tmp", ".partial")
@@ -149,10 +149,10 @@ class Sorter:
 
     # -- classification --------------------------------------------------
     def categorize(self, filename: str, rules: list[dict] | None = None) -> str:
-        """Return the destination folder name for a file under `rules`
-        (defaults to the template ruleset)."""
+        """Return the destination folder name for a file under `rules`.
+        `None` means the template ruleset; an empty list means no rules."""
         name = filename.lower()
-        for cat in rules or self._rules:
+        for cat in (self._rules if rules is None else rules):
             re_ = cat.get("_re")
             if re_ and re_.search(name):
                 return cat["name"]
@@ -162,8 +162,8 @@ class Sorter:
 
     # -- moving ----------------------------------------------------------
     def _journal(self, src: Path, dest: Path) -> None:
-        HISTORY_LOG.parent.mkdir(parents=True, exist_ok=True)
-        with HISTORY_LOG.open("a") as fh:
+        self.config.history_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.config.history_path.open("a") as fh:
             fh.write(f"{timestamp()}\t{src}\t{dest}\n")
 
     def sort_file(self, path: Path, root: Path, dry_run: bool = False,
@@ -191,7 +191,12 @@ class Sorter:
         for root in roots:
             if not root.is_dir():
                 continue
-            for entry in sorted(root.iterdir(), key=lambda p: p.name.lower()):
+            try:
+                entries = sorted(root.iterdir(), key=lambda p: p.name.lower())
+            except OSError as exc:
+                print(f"!! cannot read {fmt(root)}: {exc}", file=sys.stderr)
+                continue
+            for entry in entries:
                 if entry.is_dir() or entry.is_symlink() or entry.name.startswith("."):
                     continue
                 if looks_in_progress(entry.name):
@@ -208,9 +213,9 @@ class Sorter:
 
     # -- undo ------------------------------------------------------------
     def history(self, limit: int | None = None) -> list[tuple[str, str, str]]:
-        if not HISTORY_LOG.is_file():
+        if not self.config.history_path.is_file():
             return []
-        lines = [l for l in HISTORY_LOG.read_text().splitlines() if l.count("\t") >= 2]
+        lines = [l for l in self.config.history_path.read_text().splitlines() if l.count("\t") >= 2]
         rows = []
         for line in lines:
             ts, src, dest = line.split("\t", 2)
@@ -239,7 +244,7 @@ class Sorter:
                 rest.append((ts, src, dest))   # not reversible, keep in the log
         if not dry_run:
             ordered = sorted(rest, key=lambda r: r[0])
-            HISTORY_LOG.write_text(
+            self.config.history_path.write_text(
                 "".join(f"{t}\t{s}\t{d}\n" for t, s, d in ordered))
         print(f"undo complete: {restored} file(s) restored.")
         return restored

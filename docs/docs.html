@@ -1,110 +1,331 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentation - GNU Sorter</title>
-    <link rel="icon" href="favicon.ico">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation — GNU Sorter</title>
+  <meta name="description" content="GNU Sorter documentation: installation, rules, per-folder configuration, presets, and command-line reference.">
+  <meta name="theme-color" content="#0a0b0d">
+  <meta property="og:title" content="GNU Sorter Documentation">
+  <meta property="og:description" content="Installation, rules, per-folder configuration, presets, and command-line reference.">
+  <meta property="og:image" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/icon.png">
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('gs-theme');
+        if (stored === 'light' || stored === 'dark') {
+          document.documentElement.setAttribute('data-theme', stored);
+        } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
 </head>
-<body>
-    <div class="bg-gradient"></div>
-    <div class="bg-noise"></div>
-    
-    <nav class="nav">
-        <div class="nav-container">
-            <a href="index.html" class="nav-logo">
-                <img src="icon.png" alt="GNU Sorter" class="nav-logo-img">
-                <span class="nav-logo-text">GNU Sorter</span>
-            </a>
-            <div class="nav-links">
-                <a href="index.html" class="nav-link">Home</a>
-                <a href="features.html" class="nav-link">Features</a>
-                <a href="screenshots.html" class="nav-link">Screenshots</a>
-                <a href="docs.html" class="nav-link active">Docs</a>
-                <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" class="nav-link nav-cta">GitHub</a>
-            </div>
+<body class="docs-page">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html" aria-label="GNU Sorter home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+            <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6a2 2 0 0 1 1.4.6L12 7h6.5A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5Z" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M7.5 12h7M7.5 15h4" stroke="#a3e635" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="brand-text">GNU Sorter</span>
+      </a>
+
+      <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+        <a href="index.html">Home</a>
+        <a href="features.html">Features</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="download.html">Download</a>
+        <a href="docs.html" aria-current="page">Documentation</a>
+        <a class="nav-external" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="icon-button theme-toggle" type="button" aria-label="Toggle color theme" aria-pressed="false">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <a class="btn btn-primary btn-sm" href="download.html">Get GNU Sorter</a>
+        <button class="icon-button menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="primary-nav">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="container docs-layout">
+    <aside class="docs-sidebar">
+      <p class="docs-sidebar-title">Documentation</p>
+      <nav aria-label="On this page">
+        <a href="#overview">Overview</a>
+        <a href="#requirements">Requirements</a>
+        <a href="#install">Installation</a>
+        <a href="#quickstart">Quick start</a>
+        <a href="#rules">Rules</a>
+        <a href="#presets">Presets</a>
+        <a href="#configuration">Configuration</a>
+        <a href="#cli">CLI reference</a>
+        <a href="#uninstall">Uninstalling</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+        <a href="#help">Getting help</a>
+      </nav>
+    </aside>
+
+    <article class="docs-content">
+      <p class="kicker">Documentation</p>
+      <h1>GNU Sorter documentation</h1>
+      <p class="docs-intro">
+        GNU Sorter is an advanced file-sorting utility. You define rules that describe where files
+        should go, and it organizes the contents of the folders you choose. This page covers installing
+        it, writing rules, and driving it from the command line.
+      </p>
+
+      <section id="overview" class="docs-section">
+        <h2>Overview</h2>
+        <p>
+          GNU Sorter works with one or more <strong>folders</strong> and a set of <strong>rules</strong>.
+          When a file appears in a watched folder, it is matched against the rules for that folder and
+          moved into the destination the rule describes. Files that match nothing are collected in a
+          <code>Needs-review</code> folder so nothing is silently lost.
+        </p>
+        <p>
+          You can configure everything through a graphical application or the command line. Both use the
+          same configuration, so your rules behave the same either way.
+        </p>
+      </section>
+
+      <section id="requirements" class="docs-section">
+        <h2>Requirements</h2>
+        <ul>
+          <li>The Linux desktop build uses GTK4 and libadwaita.</li>
+          <li>The installer places everything inside your user account; no root access is required.</li>
+          <li>A native Windows build is published from the separate <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows" target="_blank" rel="noopener">gnu-sorter-windows</a> repository. See <a href="download.html">the download page</a>.</li>
+        </ul>
+      </section>
+
+      <section id="install" class="docs-section">
+        <h2>Installation</h2>
+        <p>
+          The quickest way installs from a single command: it downloads the installer script,
+          clones the repository, and runs <code>install.sh</code> for your user account.
+          See the <a href="download.html">download page</a> for both platform options.
+        </p>
+        <div class="code-block">
+          <button class="copy-btn" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash" aria-label="Copy one-line install command">Copy</button>
+          <pre><code>curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash</code></pre>
         </div>
-    </nav>
-
-    <header class="hero" style="padding-top: 120px;">
-        <div class="container">
-            <div style="text-align: center; margin-bottom: 3rem;">
-                <h1 class="hero-title">Documentation</h1>
-                <p class="hero-subtitle">Quick start guide and usage instructions</p>
+        <p class="tiny">Add <code>--service</code> to enable background watching on login:
+          <code>curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash -s -- --service</code>
+        </p>
+        <p>To install by hand instead:</p>
+        <ol class="docs-steps">
+          <li>
+            <p>Clone the repository and enter it.</p>
+            <div class="code-block">
+              <button class="copy-btn" type="button" data-copy="git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git &amp;&amp; cd gnu-sorter" aria-label="Copy clone command">Copy</button>
+              <pre><code>git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git &amp;&amp; cd gnu-sorter</code></pre>
             </div>
+          </li>
+          <li>
+            <p>Run the installer. Add <code>--service</code> to enable background watching when you sign in.</p>
+            <div class="code-block">
+              <button class="copy-btn" type="button" data-copy="./install.sh" aria-label="Copy install command">Copy</button>
+              <pre><code>./install.sh</code></pre>
+            </div>
+          </li>
+          <li>
+            <p>Launch the application.</p>
+            <div class="code-block">
+              <button class="copy-btn" type="button" data-copy="gnu-sorter --gui" aria-label="Copy run command">Copy</button>
+              <pre><code>gnu-sorter --gui</code></pre>
+            </div>
+            <p class="tiny">You can also start it from your applications menu.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section id="quickstart" class="docs-section">
+        <h2>Quick start</h2>
+        <h3>Using the GUI</h3>
+        <ol class="docs-steps">
+          <li>Open <strong>Folders</strong> and choose <strong>Add Folder</strong> to select a directory.</li>
+          <li>Open <strong>Rules</strong> and use <strong>Add Rule</strong> to send a matching file type to a destination.</li>
+          <li>Open the advanced rule editor for multiple extensions, name patterns, or regular expressions.</li>
+          <li>Apply a preset if you want a sensible starting point.</li>
+          <li>Use <strong>Sort Now</strong> to run once, or toggle <strong>Watch</strong> to sort new files automatically.</li>
+        </ol>
+
+        <h3>Using the CLI</h3>
+        <div class="code-block">
+          <button class="copy-btn" type="button" data-copy="gnu-sorter --sweep" aria-label="Copy sweep command">Copy</button>
+          <pre><code>gnu-sorter --sweep        <span class="cmt"># sort the configured folders once</span>
+gnu-sorter --watch        <span class="cmt"># keep watching for new files</span></code></pre>
         </div>
-    </header>
+      </section>
 
-    <section style="padding: 40px 0 80px;">
-        <div class="container">
-            <div class="glass-card" style="padding: 2rem; margin-bottom: 2rem;">
-                <h2 style="margin-bottom: 1rem;">Installation (Linux, user-local)</h2>
-                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 12px; overflow-x: auto; margin-bottom: 1rem;"><code>git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git
-cd gnu-sorter
-./install.sh          # install app + desktop + service menu + unit
-./install.sh --service # also enable + start background watcher</code></pre>
-                <p style="color: var(--text-secondary);">Uninstall: <code>./uninstall.sh</code> (keeps config/history). Use <code>./uninstall.sh --purge</code> to remove them.</p>
-            </div>
+      <section id="rules" class="docs-section">
+        <h2>Rules</h2>
+        <p>A rule has a destination folder and at least one condition that decides which files belong there.</p>
+        <dl class="defs">
+          <dt>Extension matching</dt>
+          <dd>Send files with a given extension to a folder, for example every <code>.jpg</code> to <code>Images</code>. A rule can list several extensions.</dd>
+          <dt>Name matching</dt>
+          <dd>Match part of a file name, or a regular expression, to catch files that are not distinguishable by extension alone.</dd>
+          <dt>Fallback</dt>
+          <dd>Files that match no rule are placed in <code>Needs-review</code>, so you can decide what to do with them.</dd>
+        </dl>
 
-            <div class="glass-card" style="padding: 2rem; margin-bottom: 2rem;">
-                <h2 style="margin-bottom: 1rem;">GUI Usage</h2>
-                <ol style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
-                    <li><strong>Add folders:</strong> Folders → Add Folder</li>
-                    <li><strong>Add rule (wizard):</strong> Rules → Add Rule (extension/name → destination → review)</li>
-                    <li><strong>Advanced:</strong> Rules ⋯ → Advanced rule editor (multi-extension, name/regex)</li>
-                    <li><strong>Presets:</strong> Rules ⋯ → Apply preset (GNOME defaults/Photography/Code/Empty)</li>
-                    <li><strong>Sort/Watch:</strong> "Sort Now" in header, toggle "Watch" for background auto-sort</li>
-                </ol>
-            </div>
+        <h3>Per-folder rules</h3>
+        <p>
+          Each folder can keep its own rules, or inherit a shared default set. This lets a Downloads
+          folder follow one scheme while a project folder follows another. You can give a folder its own
+          copy of the defaults and edit it, or revert it to the shared rules at any time.
+        </p>
+      </section>
 
-            <div class="glass-card" style="padding: 2rem;">
-                <h2 style="margin-bottom: 1rem;">CLI Usage</h2>
-                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 12px; overflow-x: auto;"><code># List default template rules
-gnu-sorter --list-rules
+      <section id="presets" class="docs-section">
+        <h2>Presets</h2>
+        <p>Presets provide a starting point that you can edit afterwards.</p>
+        <ul>
+          <li><strong>GNOME defaults</strong> — a broad set covering common document, media, and archive types.</li>
+          <li><strong>Photography</strong> — focused on image and video files.</li>
+          <li><strong>Code projects</strong> — source files, documents, and archives.</li>
+          <li><strong>Empty</strong> — start from no rules at all.</li>
+        </ul>
+      </section>
 
-# Add rule to specific folder only (auto-detaches if inheriting)
-gnu-sorter --add-rule quant --folder quant --root ~/Downloads
-
-# View folder's effective rules
-gnu-sorter --list-rules --root ~/Downloads
-
-# Revert folder to shared template
-gnu-sorter --attach-rules --root ~/Downloads
-
-# Sweep once / watch / undo last
-gnu-sorter --sweep
-gnu-sorter --watch
-gnu-sorter --undo-last 1
-
-# Manage watched folders
-gnu-sorter --add-root ~/Pictures/Inbox
-gnu-sorter --remove-root ~/Pictures/Inbox</code></pre>
-            </div>
+      <section id="configuration" class="docs-section">
+        <h2>Configuration</h2>
+        <p>Your rules, folders, and settings are stored in your configuration directory:</p>
+        <div class="code-block">
+          <button class="copy-btn" type="button" data-copy="~/.config/gnu-sorter/" aria-label="Copy config path">Copy</button>
+          <pre><code>~/.config/gnu-sorter/</code></pre>
         </div>
-    </section>
-
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <img src="icon.png" alt="GNU Sorter" class="footer-logo">
-                    <span>GNU Sorter</span>
-                </div>
-                <div class="footer-links">
-                    <a href="index.html">Home</a>
-                    <a href="features.html">Features</a>
-                    <a href="screenshots.html">Screenshots</a>
-                    <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter">GitHub</a>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>© 2026 notmicrosoft2000-cmd • GPL-3.0 License</p>
-            </div>
+        <p>The journal of moves, used for undo, is kept separately:</p>
+        <div class="code-block">
+          <button class="copy-btn" type="button" data-copy="~/.local/share/gnu-sorter/history.log" aria-label="Copy history path">Copy</button>
+          <pre><code>~/.local/share/gnu-sorter/history.log</code></pre>
         </div>
-    </footer>
+        <p>Uninstalling keeps these by default, so your rules survive a reinstall.</p>
+      </section>
 
-    <script src="script.js"></script>
+      <section id="cli" class="docs-section">
+        <h2>CLI reference</h2>
+        <p>These commands are drawn from the project README. Run <code>gnu-sorter --help</code> for the complete, current reference.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Command</th><th scope="col">Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>gnu-sorter --gui</code></td><td>Launch the graphical application.</td></tr>
+              <tr><td><code>gnu-sorter --list-rules</code></td><td>List the default template rules.</td></tr>
+              <tr><td><code>gnu-sorter --list-rules --root ~/Downloads</code></td><td>View the effective rules for a specific folder.</td></tr>
+              <tr><td><code>gnu-sorter --add-rule &lt;name&gt; --folder &lt;folder&gt; --root &lt;path&gt;</code></td><td>Add a rule to a specific folder only.</td></tr>
+              <tr><td><code>gnu-sorter --attach-rules --root &lt;path&gt;</code></td><td>Revert a folder to the shared template rules.</td></tr>
+              <tr><td><code>gnu-sorter --sweep</code></td><td>Sort the configured folders once.</td></tr>
+              <tr><td><code>gnu-sorter --watch</code></td><td>Watch the folders and sort new files.</td></tr>
+              <tr><td><code>gnu-sorter --undo-last &lt;n&gt;</code></td><td>Undo the last <code>n</code> moves.</td></tr>
+              <tr><td><code>gnu-sorter --help</code></td><td>Show all available options.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="uninstall" class="docs-section">
+        <h2>Uninstalling</h2>
+        <p>Run the uninstaller from the repository:</p>
+        <div class="code-block">
+          <button class="copy-btn" type="button" data-copy="./uninstall.sh" aria-label="Copy uninstall command">Copy</button>
+          <pre><code>./uninstall.sh</code></pre>
+        </div>
+        <p>
+          Configuration and history are kept by default. Add <code>--purge</code> to also remove
+          <code>~/.config/gnu-sorter/</code> and <code>~/.local/share/gnu-sorter/history.log</code>.
+        </p>
+      </section>
+
+      <section id="troubleshooting" class="docs-section">
+        <h2>Troubleshooting</h2>
+        <dl class="defs">
+          <dt>A file was not moved</dt>
+          <dd>GNU Sorter waits for a file to stop changing before sorting it. Files that are still downloading, hidden, or that match no rule may be left in place. Unmatched files are collected in <code>Needs-review</code>.</dd>
+          <dt>A move needs to be reversed</dt>
+          <dd>Every move is journaled. Use <strong>Undo</strong> in the interface, or <code>gnu-sorter --undo-last 1</code> on the command line.</dd>
+          <dt>Rules did not apply to a folder</dt>
+          <dd>Check whether the folder inherits the default rules rather than keeping its own set.</dd>
+        </dl>
+      </section>
+
+      <section id="help" class="docs-section">
+        <h2>Getting help</h2>
+        <p>
+          The best place to ask questions, report a problem, or contribute is the project repository on
+          GitHub.
+        </p>
+        <div class="cta-actions">
+          <a class="btn btn-primary" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter/issues" target="_blank" rel="noopener">Report an issue</a>
+          <a class="btn btn-outline" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">Open the repository</a>
+        </div>
+      </section>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <h2 class="visually-hidden">Site footer</h2>
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="index.html" aria-label="GNU Sorter home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+              <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6a2 2 0 0 1 1.4.6L12 7h6.5A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5Z" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M7.5 12h7M7.5 15h4" stroke="#a3e635" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="brand-text">GNU Sorter</span>
+        </a>
+        <p>An advanced, open-source file-sorting utility for keeping your directories organized with custom rules.</p>
+      </div>
+
+      <nav class="footer-col" aria-label="Product">
+        <h3>Product</h3>
+        <a href="index.html">Home</a>
+        <a href="features.html">Features</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="download.html">Download</a>
+      </nav>
+
+      <nav class="footer-col" aria-label="Resources">
+        <h3>Resources</h3>
+        <a href="docs.html" aria-current="page">Documentation</a>
+        <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">GitHub repository</a>
+        <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows" target="_blank" rel="noopener">Windows build</a>
+        <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter/issues" target="_blank" rel="noopener">Report an issue</a>
+      </nav>
+
+      <nav class="footer-col" aria-label="Project">
+        <h3>Project</h3>
+        <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">Contribute</a>
+        <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">Source code</a>
+        <span class="muted">License: GPL-3.0</span>
+      </nav>
+    </div>
+
+    <div class="container footer-bottom">
+      <p>&copy; <span id="year">2026</span> notmicrosoft2000-cmd &middot; GNU Sorter &middot; GPL-3.0</p>
+      <p class="footer-tag">Your files. Your rules. Automatically organized.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>

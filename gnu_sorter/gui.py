@@ -462,6 +462,7 @@ class MainWindow(Adw.ApplicationWindow):
                 row._path = None
                 self.rules_folders.append(row)
                 self.current_root = None
+                self.refresh_rules()
                 return
             paths = [r["path"] for r in roots]
             if self.current_root not in paths:
