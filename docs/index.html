@@ -1,151 +1,125 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GNU Sorter — Automatically sort any folder with custom rules</title>
-  <meta name="description" content="GTK4/libadwaita app that automatically sorts folders with per-folder rules, step-by-step wizard + advanced editor, presets, and KDE/Dolphin service menu.">
-  <meta property="og:title" content="GNU Sorter v2.0">
-  <meta property="og:description" content="Sort any folder with per-folder rules, wizard + advanced editor, presets, and KDE/Dolphin service menu.">
-  <meta property="og:image" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/icon.png">
-  <meta property="og:url" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" href="favicon.ico" sizes="any">
-  <style>
-    :root { --bg:#0d1117; --fg:#e6edf3; --card:#161b22; --border:#30363d; --accent:#58a6ff; --muted:#8b949e; }
-    * { box-sizing:border-box; }
-    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--fg); line-height:1.7; }
-    header { padding:4rem 1.5rem 2.5rem; text-align:center; }
-    .logo { width:112px; height:112px; margin:0 auto 1rem; display:block; filter:drop-shadow(0 12px 40px rgba(88,166,255,0.25)); }
-    h1 { font-size:2.8rem; margin:0 0 0.4rem; letter-spacing:-0.01em; }
-    .subtitle { color:var(--muted); font-size:1.05rem; margin:0 0 1.4rem; }
-    .badges { display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; margin:0 0 1.4rem; }
-    .badge { border:1px solid var(--border); color:var(--muted); padding:0.25rem 0.6rem; border-radius:999px; text-decoration:none; font-size:0.9rem; }
-    .cta { display:flex; gap:0.6rem; flex-wrap:wrap; justify-content:center; }
-    .btn { background:var(--accent); color:#0d1117; padding:0.7rem 1.4rem; border-radius:999px; text-decoration:none; font-weight:600; }
-    .btn.ghost { background:transparent; color:var(--fg); border:1px solid var(--border); }
-    main { max-width:1100px; margin:0 auto; padding:0 1.5rem 4rem; }
-    section { margin:3.5rem 0; }
-    h2 { font-size:1.9rem; margin:0 0 0.6rem; letter-spacing:-0.01em; }
-    .lead { color:var(--muted); margin:0 0 1.4rem; }
-    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem; }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1.1rem 1.2rem; }
-    .card h3 { margin:0 0 0.4rem; font-size:1.1rem; }
-    .card p { margin:0; color:var(--muted); }
-    .screenshots { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1rem; }
-    .shot { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; }
-    .shot img { width:100%; display:block; border-bottom:1px solid var(--border); }
-    .shot span { padding:0.6rem 0.8rem; color:var(--muted); font-size:0.95rem; }
-    .steps { display:grid; gap:0.8rem; }
-    .step { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:0.9rem 1rem; }
-    .step strong { display:block; margin-bottom:0.3rem; }
-    pre { background:#0f1520; border:1px solid var(--border); border-radius:12px; padding:1rem 1.2rem; overflow:auto; font-size:0.95rem; }
-    footer { text-align:center; padding:2rem 1rem 4rem; color:var(--muted); border-top:1px solid var(--border); }
-    footer a { color:var(--muted); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GNU Sorter - Smart File Organization</title>
+    <meta name="description" content="Automatically sort any folder with per-folder rules, wizard + advanced editor, presets, and cross-platform support.">
+    <meta property="og:title" content="GNU Sorter v2.0">
+    <meta property="og:description" content="Smart, elegant file organization for Linux and Windows.">
+    <meta property="og:image" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/icon.png">
+    <meta property="og:url" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/">
+    <link rel="icon" href="favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <img class="logo" src="icon.png" alt="GNU Sorter logo" width="112" height="112">
-    <h1>GNU Sorter v2.0</h1>
-    <p class="subtitle">GTK4/libadwaita app that sorts any folder(s) with per-folder custom rules. Wizard + advanced editor, presets, KDE/Dolphin service menu.</p>
-    <div class="badges">
-      <a class="badge" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter/releases/tag/v2.0.0">v2.0.0</a>
-      <span class="badge">License: GPL-3.0</span>
-      <span class="badge">Platform: Linux (Windows coming)</span>
-    </div>
-    <div class="cta">
-      <a class="btn" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter#installation-user-local">Linux install</a>
-      <a class="btn ghost" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter/releases/tag/v2.0.0">Downloads (v2.0.0)</a>
-      <a class="btn ghost" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter">View on GitHub</a>
-    </div>
-  </header>
+    <div class="bg-gradient"></div>
+    <div class="bg-noise"></div>
+    
+    <nav class="nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <img src="icon.png" alt="GNU Sorter" class="nav-logo-img">
+                <span class="nav-logo-text">GNU Sorter</span>
+            </a>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link active">Home</a>
+                <a href="features.html" class="nav-link">Features</a>
+                <a href="screenshots.html" class="nav-link">Screenshots</a>
+                <a href="docs.html" class="nav-link">Docs</a>
+                <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" class="nav-link nav-cta">GitHub</a>
+            </div>
+        </div>
+    </nav>
 
-  <main>
-    <section>
-      <h2>Features</h2>
-      <p class="lead">Simple where it matters, powerful when you need it.</p>
-      <div class="grid">
-        <article class="card"><h3>Per-folder rules</h3><p>Each watched folder can have its own ruleset or inherit the shared default template.</p></article>
-        <article class="card"><h3>Split-view editor</h3><p>Folders on the left, rules on the right. Search, custom/builtin badges, and “Use default rules” switch.</p></article>
-        <article class="card"><h3>Wizard + Advanced</h3><p>Step-by-step guided flow for newcomers, or a compact advanced form (multi-extension, name/regex, destination).</p></article>
-        <article class="card"><h3>Quick presets</h3><p>Jump-start with GNOME defaults, Photography, Code projects, or Empty.</p></article>
-        <article class="card"><h3>KDE/Dolphin service menu</h3><p>Right-click “Sort with GNU Sorter” directly from Dolphin.</p></article>
-        <article class="card"><h3>Safe &amp; reversible</h3><p>Skips in-progress files, stability window, collision-safe renames, and journaled <code>--undo</code>.</p></article>
-      </div>
+    <header class="hero">
+        <div class="hero-container">
+            <div class="hero-glass">
+                <img src="icon.png" alt="GNU Sorter Logo" class="hero-logo">
+                <h1 class="hero-title">GNU <span class="gradient-text">Sorter</span></h1>
+                <p class="hero-subtitle">Intelligent file organization with elegant per-folder rules, a refined UI, and seamless automation.</p>
+                <div class="hero-badges">
+                    <span class="badge">v2.0.0</span>
+                    <span class="badge">GPL-3.0</span>
+                    <span class="badge">Linux • Windows</span>
+                </div>
+                <div class="hero-cta">
+                    <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter#installation-user-local" class="btn btn-primary">Install for Linux</a>
+                    <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter/releases/tag/v2.0.0" class="btn btn-ghost">Download Release</a>
+                    <a href="features.html" class="btn btn-ghost">Explore Features</a>
+                </div>
+            </div>
+            <div class="hero-showcase">
+                <img src="images/1-folders.png" alt="GNU Sorter Interface" class="showcase-img">
+            </div>
+        </div>
+    </header>
+
+    <section class="features-preview">
+        <div class="container">
+            <h2 class="section-title">Why <span class="gradient-text">GNU Sorter</span></h2>
+            <p class="section-subtitle">Thoughtfully designed for simplicity and power</p>
+            <div class="features-grid">
+                <div class="feature-card glass-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Per-Folder Rules</h3>
+                    <p>Each folder gets its own independent ruleset, or inherits your global template.</p>
+                </div>
+                <div class="feature-card glass-card">
+                    <div class="feature-icon">✨</div>
+                    <h3>Wizard + Advanced</h3>
+                    <p>Guided step-by-step setup for beginners, compact advanced editor for power users.</p>
+                </div>
+                <div class="feature-card glass-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Smart Automation</h3>
+                    <p>Watch folders in the background with stability checks, collision-safe moves, and undo support.</p>
+                </div>
+                <div class="feature-card glass-card">
+                    <div class="feature-icon">🖥️</div>
+                    <h3>Cross-Platform</h3>
+                    <p>Built for Linux with Windows support underway. Tray mode, CLI, and GUI included.</p>
+                </div>
+            </div>
+        </div>
     </section>
 
-    <section>
-      <h2>Screenshots</h2>
-      <p class="lead">A quick look at the v2.0 interface.</p>
-      <div class="screenshots">
-        <figure class="shot"><img src="images/1-folders.png" alt="Folders page"><span>Folders — add and manage watched folders</span></figure>
-        <figure class="shot"><img src="images/2-rules.png" alt="Rules page split view"><span>Rules — split view (folders · rules)</span></figure>
-        <figure class="shot"><img src="images/2a-rules.png" alt="Rules page"><span>Rules — search, custom badge, advanced section</span></figure>
-        <figure class="shot"><img src="images/3-activity.png" alt="Activity page"><span>Activity — recent moves + Undo Last</span></figure>
-        <figure class="shot"><img src="images/4-settings.png" alt="Settings page"><span>Settings — behaviour, extras, startup</span></figure>
-        <figure class="shot"><img src="images/11-about.png" alt="About dialog"><span>About — icon, credits, links, GPL-3.0</span></figure>
-      </div>
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-glass">
+                <h2>Ready to declutter your folders?</h2>
+                <p>Experience the elegance of automatic file organization</p>
+                <div class="cta-buttons">
+                    <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" class="btn btn-primary">Get Started on GitHub</a>
+                    <a href="docs.html" class="btn btn-ghost">Read Documentation</a>
+                </div>
+            </div>
+        </div>
     </section>
 
-    <section>
-      <h2>How to use</h2>
-      <p class="lead">Get started in seconds.</p>
-      <h3>GUI</h3>
-      <div class="steps">
-        <div class="step"><strong>1) Add folders</strong> Open GNU Sorter → Folders → Add Folder (e.g. <code>~/Downloads</code>, <code>~/Documents/Inbox</code>).</div>
-        <div class="step"><strong>2) Add a rule (wizard)</strong> Go to Rules → Add Rule. Pick “File extension” or “File name”, enter your match, choose destination, review and add.</div>
-        <div class="step"><strong>3) Or go advanced</strong> Rules ⋯ → Advanced rule editor… for multi-extensions, name contains, or a regex.</div>
-        <div class="step"><strong>4) Use presets</strong> Rules ⋯ → Apply preset (GNOME defaults / Photography / Code projects / Empty).</div>
-        <div class="step"><strong>5) Sort</strong> Click “Sort Now” in the header, or right-click for context menu. Toggle “Watch” for background auto-sort.</div>
-      </div>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="icon.png" alt="GNU Sorter" class="footer-logo">
+                    <span>GNU Sorter</span>
+                </div>
+                <div class="footer-links">
+                    <a href="features.html">Features</a>
+                    <a href="screenshots.html">Screenshots</a>
+                    <a href="docs.html">Docs</a>
+                    <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter">GitHub</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 notmicrosoft2000-cmd • GPL-3.0 License</p>
+            </div>
+        </div>
+    </footer>
 
-      <h3 style="margin-top:1.8rem;">CLI</h3>
-      <pre><code># Show default template rules
-gnu-sorter --list-rules
-
-# Add .cbz → Comics/ only for ~/Downloads (auto-detaches if inheriting)
-gnu-sorter --add-rule cbz --folder Comics --root ~/Downloads
-
-# View a folder's effective rules and whether it's custom
-gnu-sorter --list-rules --root ~/Downloads
-
-# Revert that folder to shared template
-gnu-sorter --attach-rules --root ~/Downloads
-
-# Sweep once / watch in background / undo last
-gnu-sorter --sweep
-gnu-sorter --watch
-gnu-sorter --undo-last 1
-
-# Add/ remove watched folders
-gnu-sorter --add-root ~/Pictures/Inbox
-gnu-sorter --remove-root ~/Pictures/Inbox
-</code></pre>
-
-      <h3 style="margin-top:1.8rem;">Install (user-local, no sudo)</h3>
-      <pre><code>git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git
-cd gnu-sorter
-./install.sh          # install app + desktop + service menu + unit
-./install.sh --service # also enable + start background watcher
-</code></pre>
-      <p>Uninstall: <code>./uninstall.sh</code> (keeps config/history). <code>./uninstall.sh --purge</code> removes them too.</p>
-    </section>
-
-    <section>
-      <h2>About</h2>
-      <p class="lead">GNU Sorter v2.0 — © 2026 <strong>notmicrosoft2000-cmd</strong>. Licensed under <strong>GPL-3.0</strong>.</p>
-      <div class="cta">
-        <a class="btn ghost" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter">Source code</a>
-        <a class="btn ghost" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter/issues">Report an issue</a>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <p>Served from <code>main/docs</code> • <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter">GitHub</a></p>
-  </footer>
+    <script src="script.js"></script>
 </body>
 </html>
-EOF
-echo "ok"
