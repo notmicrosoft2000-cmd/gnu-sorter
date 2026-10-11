@@ -60,12 +60,19 @@ may sit a beat longer before being sorted — that's the point.
 - `tests/test_detection.py`: 7 tests (suffixes, settle window, probe checks,
   sweep holds in-progress / too-fresh / growing, sweep moves stable).
 
-### Windows (TODO — Phase 1b)
-- Mirror in `SortEngine`: open-file-handle check (CreateFile with
-  share-denial) as an *additional* Tier-2 signal — Linux can't do this
-  cheaply, Windows can.
-- Same `cautious_downloads` setting, same "waiting" visibility in the
-  Activity/journal UI, same two-probe default.
+### Windows (DONE — Phase 1b)
+- `SortEngine`: same extended suffixes, `SettleWindowSeconds`, multi-probe
+  `IsStable` (size + mtime), two-probe cautious sweep, plus the Windows-only
+  **open-handle check** (`IsFileBusy`: a sharing violation on our open-for-
+  write attempt ⇒ another process is mid-write ⇒ file is held, not sorted).
+- `WatchService` stability loop stands down while a handle is open (up to
+  1 min).
+- `SortStats` gains `Held`/`HeldFiles`; "Sort now" reports "N waiting
+  (downloads / too fresh)".
+- Same `cautious_downloads` setting (default true) with a Settings toggle
+  (`AppSettings` + `SettingsViewModel` + `SettingsView.xaml`).
+- C# has no local .NET toolchain — validated by the MSBuild CI workflow on
+  every `main` push.
 
 ---
 
@@ -147,7 +154,7 @@ Advanced form.
 
 | Phase | Theme | Linux | Windows |
 |------|-------|-------|---------|
-| 1 | Download detection (two-tier hold) | ✅ engine+cli+gui+tests on main | ⏳ mirror SortEngine + handle-lock check |
+| 1 | Download detection (two-tier hold) | ✅ engine+cli+gui+tests on main | ✅ pushed `0b9f50f`, MSBuild CI validating |
 | 2 | Journal v2 & restore | ⏳ | ⏳ |
 | 3 | Rule wizard (5 steps) | ⏳ | ⏳ |
 | 4 | Design & mascot | ⏳ | ⏳ |
