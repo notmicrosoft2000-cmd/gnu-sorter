@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import threading
 from pathlib import Path
 
 from . import __version__
-from .config import Config, DEFAULT_RULES, safe_category_name
+from .config import (Config, DEFAULT_RULES, atomic_write_text,
+                     normalize_rules, safe_category_name)
 from .engine import Sorter, expand, fmt
 from . import service
 
@@ -52,6 +54,20 @@ def build_parser() -> argparse.ArgumentParser:
                       help="only entries sorted into this folder")
     mode.add_argument("--journal-rule", metavar="NAME",
                       help="only entries caught by this rule")
+    mode.add_argument("--journal-name", metavar="PATTERN",
+                      help="only entries whose file name matches (substring "
+                           "or glob, e.g. 'screenshot*')")
+    mode.add_argument("--journal-batch", metavar="ID",
+                      help="only entries from one sweep (batch id)")
+    mode.add_argument("--restore-into", metavar="PATH",
+                      help="restore into this folder instead of each file's "
+                           "original location")
+    mode.add_argument("--backup-journal", action="store_true",
+                      help="copy the journal to history.log.bak and exit")
+    mode.add_argument("--export-journal", metavar="FILE",
+                      help="write the journal (honouring the selectors) to FILE")
+    mode.add_argument("--import-journal", metavar="FILE",
+                      help="merge entries from FILE into the journal")
     mode.add_argument("--repair", action="store_true",
                       help="drop malformed journal lines (with --journal)")
 
@@ -74,6 +90,10 @@ def build_parser() -> argparse.ArgumentParser:
                       help="give a folder (--root) its own copy of the rules")
     rgrp.add_argument("--attach-rules", action="store_true",
                       help="make a folder (--root) inherit the default rules again")
+    rgrp.add_argument("--export-rules", metavar="FILE",
+                      help="write the current rules (or --root's rules) to FILE")
+    rgrp.add_argument("--import-rules", metavar="FILE",
+                      help="replace the current rules (or --root's rules) from FILE")
 
     sgrp = p.add_argument_group("service")
     sgrp.add_argument("--install-service", action="store_true", help="install the systemd unit")
@@ -214,6 +234,43 @@ def _cmd_attach_rules(cfg: Config, root: str | None) -> int:
     return 0
 
 
+def _cmd_export_rules(cfg: Config, path: str, root: str | None = None) -> int:
+    """Write the effective rules (template or one folder's) to a JSON file."""
+    if root:
+        rules, _ = cfg.rules_for(expand(root))
+        where = fmt(expand(root))
+    else:
+        rules = cfg.load_rules()
+        where = "default template"
+    atomic_write_text(Path(path),
+                      json.dumps(rules, indent=2, ensure_ascii=False) + "\n")
+    print(f"exported {len(rules)} rule(s) from {where} → {path}")
+    return 0
+
+
+def _cmd_import_rules(cfg: Config, path: str, root: str | None = None) -> int:
+    """Replace the effective rules (template or one folder's) from a JSON file."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"!! could not read rules from {path}: {exc}", file=sys.stderr)
+        return 1
+    if isinstance(data, dict) and "rules" in data:
+        data = data["rules"]
+    rules = normalize_rules(data)
+    if not rules:
+        print(f"!! no usable rules found in {path}", file=sys.stderr)
+        return 1
+    if root:
+        cfg.save_rules_for(expand(root), rules)
+        where = fmt(expand(root))
+    else:
+        cfg.save_rules(rules)
+        where = "default template"
+    print(f"imported {len(rules)} rule(s) into {where} from {path}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     cfg = Config(args.config)
@@ -241,6 +298,10 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_detach_rules(cfg, rule_root)
     if args.attach_rules:
         return _cmd_attach_rules(cfg, rule_root)
+    if args.export_rules:
+        return _cmd_export_rules(cfg, args.export_rules, rule_root)
+    if args.import_rules:
+        return _cmd_import_rules(cfg, args.import_rules, rule_root)
 
     # ---- service management -------------------------------------------
     if args.install_service:
@@ -289,13 +350,34 @@ def main(argv: list[str] | None = None) -> int:
 
     roots = [expand(r) for r in args.root] if args.root else None
 
+    if args.backup_journal:
+        bak = sorter.backup_journal()
+        print(f"journal backed up → {fmt(bak)}" if bak
+              else "no journal to back up.")
+        return 0
+
+    if args.export_journal:
+        n = sorter.export_journal(
+            args.export_journal, limit=args.limit, since=args.since,
+            before=args.before, folder=args.journal_folder,
+            rule=args.journal_rule, name=args.journal_name,
+            batch=args.journal_batch)
+        print(f"exported {n} journal entr(ies) → {args.export_journal}")
+        return 0
+
+    if args.import_journal:
+        n = sorter.import_journal(args.import_journal)
+        print(f"imported {n} journal entr(ies) from {args.import_journal}")
+        return 0
+
     if args.journal:
         if args.repair:
             dropped = sorter.repair_journal()
             print(f"journal repaired: removed {dropped} malformed entry/-ies.")
         rows = sorter.records(limit=args.limit, since=args.since,
                               before=args.before, folder=args.journal_folder,
-                              rule=args.journal_rule)
+                              rule=args.journal_rule, name=args.journal_name,
+                              batch=args.journal_batch)
         if not rows:
             print("journal is empty.")
         else:
@@ -308,12 +390,16 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.undo or args.restore:
         if args.restore and not (args.journal_folder or args.journal_rule
+                                 or args.journal_name or args.journal_batch
                                  or args.since or args.before):
             print("--restore needs a selector: --journal-folder, "
-                  "--journal-rule, --since or --before", file=sys.stderr)
+                  "--journal-rule, --journal-name, --journal-batch, --since "
+                  "or --before", file=sys.stderr)
             return 2
         sorter.undo(dry_run=dry, limit=args.undo_last, since=args.since,
-                    before=args.before, folder=args.journal_folder, rule=args.journal_rule)
+                    before=args.before, folder=args.journal_folder,
+                    rule=args.journal_rule, name=args.journal_name,
+                    batch=args.journal_batch, target=args.restore_into)
         return 0
 
     if args.watch:

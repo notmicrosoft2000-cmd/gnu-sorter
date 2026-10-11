@@ -312,6 +312,38 @@ gnu-sorter --watch        <span class="cmt"># keep watching for new files</span>
         </figure>
       </section>
 
+      <section id="journal" class="docs-section">
+        <h2>The journal</h2>
+        <p>
+          Every move is recorded in a journal so it can be reversed. Funnel reads that journal once
+          into an in-memory index, so the Rules page can show how many files each rule has sorted and
+          the Activity page can search instantly.
+        </p>
+        <ul>
+          <li><strong>Search</strong> — filter by file name (substring or glob), rule, folder or time window.</li>
+          <li><strong>Restore preview</strong> — see exactly which files would come back, their sizes and any name clashes, before committing.</li>
+          <li><strong>Restore anywhere</strong> — return files to their original folders, or into a folder you choose.</li>
+          <li><strong>Backup &amp; portability</strong> — back the journal up to <code>history.log.bak</code>, or export and import it to move history between machines.</li>
+        </ul>
+        <figure class="viz" data-viz="undo">
+          <figcaption class="viz-cap"><b>Nothing is a one-way door.</b> Every move is journaled, searchable and reversible.</figcaption>
+        </figure>
+        <div class="gallery">
+          <figure class="shot">
+            <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
+            <figcaption><b>Activity</b> &mdash; every move, with the rule that caught it.</figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="shot-media"><img src="images/app-activity-search.png" alt="Searching the Activity page by file name." loading="lazy" data-shot></div>
+            <figcaption><b>Search</b> &mdash; filter by file name, rule or date range.</figcaption>
+          </figure>
+          <figure class="shot">
+            <div class="shot-media"><img src="images/app-activity-restore.png" alt="A restore preview listing files, sizes and name clashes." loading="lazy" data-shot></div>
+            <figcaption><b>Restore preview</b> &mdash; see sizes and clashes before committing.</figcaption>
+          </figure>
+        </div>
+      </section>
+
       <section id="cli" class="docs-section">
         <h2>CLI reference</h2>
         <p>These commands are drawn from the project README. Run <code>gnu-sorter --help</code> for the complete, current reference.</p>
@@ -327,9 +359,15 @@ gnu-sorter --watch        <span class="cmt"># keep watching for new files</span>
               <tr><td><code>gnu-sorter --list-rules --root ~/Downloads</code></td><td>View the effective rules for a specific folder.</td></tr>
               <tr><td><code>gnu-sorter --add-rule &lt;name&gt; --folder &lt;folder&gt; --root &lt;path&gt;</code></td><td>Add a rule to a specific folder only.</td></tr>
               <tr><td><code>gnu-sorter --attach-rules --root &lt;path&gt;</code></td><td>Revert a folder to the shared template rules.</td></tr>
+              <tr><td><code>gnu-sorter --export-rules &lt;file&gt;</code></td><td>Write the current rules (or a folder's, with <code>--root</code>) to a JSON file.</td></tr>
+              <tr><td><code>gnu-sorter --import-rules &lt;file&gt;</code></td><td>Replace the current rules (or a folder's, with <code>--root</code>) from a JSON file.</td></tr>
               <tr><td><code>gnu-sorter --sweep</code></td><td>Sort the configured folders once.</td></tr>
               <tr><td><code>gnu-sorter --watch</code></td><td>Watch the folders and sort new files.</td></tr>
+              <tr><td><code>gnu-sorter --journal --journal-name &lt;glob&gt;</code></td><td>Search the move journal by file name (substring or glob), rule, folder or date range.</td></tr>
+              <tr><td><code>gnu-sorter --restore --journal-rule &lt;name&gt; --dry-run</code></td><td>Preview a restore; drop <code>--dry-run</code> to commit. Add <code>--restore-into</code> to target a folder.</td></tr>
               <tr><td><code>gnu-sorter --undo-last &lt;n&gt;</code></td><td>Undo the last <code>n</code> moves.</td></tr>
+              <tr><td><code>gnu-sorter --backup-journal</code></td><td>Copy the journal to <code>history.log.bak</code>.</td></tr>
+              <tr><td><code>gnu-sorter --export-journal &lt;file&gt;</code> / <code>--import-journal &lt;file&gt;</code></td><td>Move the journal between machines; imports merge without duplicating.</td></tr>
               <tr><td><code>gnu-sorter --help</code></td><td>Show all available options.</td></tr>
             </tbody>
           </table>

@@ -22,7 +22,8 @@ from gi.repository import Adw, Gtk, Gsk, GLib, Graphene  # noqa: E402
 
 from gnu_sorter.config import Config  # noqa: E402
 from gnu_sorter.gui import (FunnelApp, RuleWizard, AdvancedDialog,  # noqa: E402
-                            WIZARD_RECIPES)
+                            RestoreDialog, WIZARD_RECIPES)
+from gnu_sorter import engine  # noqa: E402
 
 OUT = pathlib.Path(os.environ.get("GS_SMOKE_OUT", "/tmp/opencode/gsui"))
 
@@ -101,6 +102,28 @@ def main() -> int:
     own.append({"name": "Comics", "extensions": ["cbz", "cbr"]})
     cfg.save_rules_for(root2, own)
 
+    # Seed the journal so the Activity page and the restore preview have
+    # something real to show (destination files exist, so the plan is live).
+    seeded = [
+        ("holiday.jpg", "Photos", "holiday.jpg"),
+        ("screenshot_2026.png", "Photos/Screenshots", "screenshot_2026.png"),
+        ("notes.txt", "Documents", "notes.txt"),
+        ("clip.mp4", "Videos", "clip.mp4"),
+        ("archive.zip", "Archives", "archive.zip"),
+    ]
+    now = engine.timestamp()
+    lines = []
+    for fname, category, leaf in seeded:
+        dest = pathlib.Path(root1) / category / leaf
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"x" * 64)
+        rec = engine._journal_record(now, str(pathlib.Path(root1) / fname),
+                                     str(dest), size=64, mtime=0.0,
+                                     rule=category.split("/")[0],
+                                     root=root1, batch="seed")
+        lines.append(engine._journal_line_v2(rec))
+    cfg.history_path.write_text("".join(lines), encoding="utf-8")
+
     app = FunnelApp(cfg, migrated=False)
     state = {"step": 0, "wiz": None, "adv": None}
 
@@ -171,9 +194,19 @@ def main() -> int:
             win.sidebar.select_row(win.sidebar.get_row_at_index(2))
             capture(win, "12-activity.png")
         elif step == 14:
+            win.activity_search.set_text("screenshot")
+            capture(win, "12b-activity-search.png")
+        elif step == 15:
+            win.activity_search.set_text("")
+            state["restore"] = RestoreDialog(win, rule="Photos")
+            state["restore"].open()
+            capture_dialog(state["restore"].dialog, "12c-restore.png")
+        elif step == 16:
+            state["restore"].dialog.close()
+        elif step == 17:
             win.sidebar.select_row(win.sidebar.get_row_at_index(3))
             capture(win, "13-settings.png")
-        elif step == 15:
+        elif step == 18:
             win.show_about()
             capture(win, "14-about.png")
             app.quit()

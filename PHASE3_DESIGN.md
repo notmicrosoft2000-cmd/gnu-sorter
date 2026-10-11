@@ -172,7 +172,10 @@ dark/light. Data comes from the engine's `classify()` (one pass over the folder)
    tests. *(Windows parity follows.)* — **DONE**
 2. **Rules page overhaul** (Linux) + refined advanced editor. — **DONE**
 3. **6-step wizard** (Linux) incl. folder picker + custom animation. — **DONE**
-4. **Journal search/index/backup/restore** (CLI + Activity).
+4. **Journal search/index/backup/restore** (CLI + Activity). — **DONE**
+   (`JournalIndex`, name/glob + batch + date selectors, restore preview &
+   `--restore-into`, `--backup-journal`, journal/rules export & import, and an
+   Activity search bar + preview-then-commit restore dialog.)
 5. **Windows mirror** of 1–4 (native stepper, Fluent icons).
 6. Mark Phase 3 done; Phase 4 art lands on the seams above.
 

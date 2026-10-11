@@ -191,6 +191,131 @@ class JournalTests(unittest.TestCase):
             self.assertEqual(sorter.repair_journal(), 2)
             self.assertEqual(len(sorter.records()), 2)
 
+    def test_journal_index_counts_and_buckets(self):
+        with tempfile.TemporaryDirectory() as td:
+            sorter, cfg = _sorter(Path(td))
+            tmp, root = Path(td), Path(td) / "In"
+            (root / "Documents").mkdir(parents=True)
+            (root / "Videos").mkdir(parents=True)
+            now = datetime.now().strftime(_TS)
+            recs = [
+                engine._journal_record(now, str(tmp / "a.pdf"),
+                                       str(root / "Documents" / "a.pdf"),
+                                       rule="Documents", root=str(root),
+                                       batch="b1"),
+                engine._journal_record(now, str(tmp / "b.pdf"),
+                                       str(root / "Documents" / "b.pdf"),
+                                       rule="Documents", root=str(root),
+                                       batch="b1"),
+                engine._journal_record(now, str(tmp / "c.mp4"),
+                                       str(root / "Videos" / "c.mp4"),
+                                       rule="Videos", root=str(root),
+                                       batch="b2"),
+            ]
+            _write_history(cfg, [engine._journal_line_v2(r) for r in recs])
+            idx = sorter.journal_index()
+            self.assertEqual(len(idx), 3)
+            self.assertEqual(idx.counts(), {"Documents": 2, "Videos": 1})
+            self.assertEqual(len(idx.by_batch["b1"]), 2)
+            self.assertEqual(len(idx.by_folder[str(root / "Documents")]), 2)
+            self.assertEqual(sorter.rule_counts(), {"Documents": 2, "Videos": 1})
+
+    def test_search_by_name_and_batch(self):
+        with tempfile.TemporaryDirectory() as td:
+            sorter, cfg = _sorter(Path(td))
+            tmp, root = Path(td), Path(td) / "In"
+            (root / "Documents").mkdir(parents=True)
+            (root / "Photos").mkdir(parents=True)
+            now = datetime.now().strftime(_TS)
+            recs = [
+                engine._journal_record(now, str(tmp / "a.pdf"),
+                                       str(root / "Documents" / "a.pdf"),
+                                       rule="Documents", batch="b1"),
+                engine._journal_record(now, str(tmp / "screenshot_2026.png"),
+                                       str(root / "Photos" / "screenshot_2026.png"),
+                                       rule="Photos", batch="b2"),
+                engine._journal_record(now, str(tmp / "holiday.png"),
+                                       str(root / "Photos" / "holiday.png"),
+                                       rule="Photos", batch="b2"),
+            ]
+            _write_history(cfg, [engine._journal_line_v2(r) for r in recs])
+            self.assertEqual([r["src"] for r in sorter.records(name="*.pdf")],
+                             [str(tmp / "a.pdf")])
+            self.assertEqual(len(sorter.records(name="screenshot")), 1)
+            self.assertEqual(len(sorter.records(batch="b2")), 2)
+            self.assertEqual(len(sorter.records(name="*.png", batch="b2")), 2)
+
+    def test_backup_journal(self):
+        with tempfile.TemporaryDirectory() as td:
+            sorter, cfg = _sorter(Path(td))
+            rec = engine._journal_record(
+                "2026-10-11 00:00:00", "/a", "/b", rule="X", batch="b")
+            _write_history(cfg, [engine._journal_line_v2(rec)])
+            bak = sorter.backup_journal()
+            self.assertIsNotNone(bak)
+            self.assertEqual(bak.name, "history.log.bak")
+            self.assertEqual(bak.read_text(), cfg.history_path.read_text())
+            # nothing to back up on a clean config directory
+            empty, _ = _sorter(Path(td) / "empty")
+            self.assertIsNone(empty.backup_journal())
+
+    def test_export_import_journal(self):
+        with tempfile.TemporaryDirectory() as td:
+            sorter, cfg = _sorter(Path(td))
+            tmp = Path(td)
+            now = datetime.now().strftime(_TS)
+            recs = [
+                engine._journal_record(now, "/a.pdf", "/doc/a.pdf",
+                                       rule="Documents", batch="b1"),
+                engine._journal_record(now, "/b.mp4", "/vid/b.mp4",
+                                       rule="Videos", batch="b1"),
+            ]
+            _write_history(cfg, [engine._journal_line_v2(r) for r in recs])
+            out = tmp / "export.log"
+            self.assertEqual(sorter.export_journal(out, rule="Documents"), 1)
+            self.assertEqual(sorter.export_journal(tmp / "all.log"), 2)
+            # re-importing the same entries is a no-op (ids dedupe)
+            self.assertEqual(sorter.import_journal(out), 0)
+            # a fresh sorter picks them up
+            fresh, _ = _sorter(tmp / "fresh")
+            self.assertEqual(fresh.import_journal(out), 1)
+            self.assertEqual(len(fresh.records()), 1)
+            self.assertEqual(fresh.records()[0]["rule"], "Documents")
+
+    def test_restore_plan_and_target(self):
+        with tempfile.TemporaryDirectory() as td:
+            sorter, cfg = _sorter(Path(td))
+            tmp, root = Path(td), Path(td) / "In"
+            (root / "Documents").mkdir(parents=True)
+            now = datetime.now().strftime(_TS)
+            dest_a = root / "Documents" / "a.txt"
+            dest_b = root / "Documents" / "b.txt"
+            dest_a.write_bytes(b"x" * 5)
+            dest_b.write_bytes(b"x" * 5)
+            recs = [
+                engine._journal_record(now, str(tmp / "a.txt"), str(dest_a),
+                                       size=5, rule="Documents", batch="b1"),
+                engine._journal_record(now, str(tmp / "b.txt"), str(dest_b),
+                                       size=5, rule="Documents", batch="b1"),
+            ]
+            _write_history(cfg, [engine._journal_line_v2(r) for r in recs])
+
+            target = tmp / "Back"
+            target.mkdir()
+            (target / "a.txt").write_bytes(b"older")     # force a collision
+            plan = sorter.restore_plan(sorter._read_journal(), target=str(target))
+            self.assertEqual(len(plan), 2)
+            by_name = {p["src"].name: p for p in plan}
+            self.assertEqual(by_name["a.txt"]["status"], "collision")
+            self.assertEqual(by_name["b.txt"]["status"], "restore")
+
+            restored = sorter.undo(rule="Documents", target=str(target))
+            self.assertEqual(restored, 2)
+            self.assertEqual((target / "a.txt").read_bytes(), b"older")
+            self.assertTrue((target / "a (1).txt").exists())
+            self.assertTrue((target / "b.txt").exists())
+            self.assertEqual(sorter.records(), [])
+
     def test_rotation_trims(self):
         with tempfile.TemporaryDirectory() as td:
             sorter, _cfg = _sorter(Path(td))

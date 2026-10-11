@@ -97,10 +97,27 @@ gnu-sorter --list-rules --root ~/Downloads
 # Revert folder to shared template
 gnu-sorter --attach-rules --root ~/Downloads
 
+# Export / import rules (whole template, or one folder with --root)
+gnu-sorter --export-rules ~/rules.json
+gnu-sorter --import-rules ~/rules.json --root ~/Downloads
+
 # Sweep once / watch / undo last
 gnu-sorter --sweep
 gnu-sorter --watch
 gnu-sorter --undo-last 1
+
+# Search the journal: by rule, folder, name (substring or glob) or date range
+gnu-sorter --journal --journal-rule Photos --journal-name 'screenshot*'
+gnu-sorter --journal --since 7d --journal-folder ~/Downloads/Documents
+
+# Restore: preview first (--dry-run), then commit into the original folders
+gnu-sorter --restore --journal-name '*.jpg' --dry-run
+gnu-sorter --restore --journal-rule Photos --restore-into ~/Restored
+
+# Back up / export / import the journal
+gnu-sorter --backup-journal
+gnu-sorter --export-journal ~/history-export.log
+gnu-sorter --import-journal ~/history-export.log
 ```
 
 ## About

@@ -106,6 +106,19 @@ def _dim(text: str) -> Gtk.Label:
     return lbl
 
 
+def _human_size(n) -> str:
+    """Compact file size for journal/restore rows."""
+    try:
+        size = float(n)
+    except (TypeError, ValueError):
+        return ""
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if size < 1024 or unit == "TB":
+            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} TB"
+
+
 def _ext_summary(exts) -> str:
     items = ["." + str(e).lstrip(".") for e in exts]
     if not items:
@@ -876,28 +889,94 @@ class MainWindow(Adw.ApplicationWindow):
         spacer = Gtk.Box()
         spacer.set_hexpand(True)
         head.append(spacer)
+        self.activity_search = Gtk.SearchEntry()
+        self.activity_search.set_placeholder_text("Search file name…")
+        self.activity_search.set_width_chars(16)
+        self.activity_search.connect("search-changed",
+                                     lambda _e: self.refresh_activity())
+        head.append(self.activity_search)
+        self.restore_btn = Gtk.Button(label="Restore…")
+        self.restore_btn.add_css_class("pill")
+        self.restore_btn.connect("clicked", self.on_restore)
+        head.append(self.restore_btn)
         self.undo_btn = Gtk.Button(label="Undo Last")
         self.undo_btn.add_css_class("pill")
         self.undo_btn.connect("clicked", self.on_undo)
         head.append(self.undo_btn)
         outer.append(head)
 
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        self.activity_rule_filter = Gtk.DropDown.new_from_strings(["All rules"])
+        self.activity_rule_filter.set_tooltip_text("Filter by rule")
+        try:
+            self.activity_rule_filter.set_enable_search(True)
+        except AttributeError:
+            pass
+        self.activity_rule_filter.connect(
+            "notify::selected", lambda *_a: self.refresh_activity())
+        bar.append(self.activity_rule_filter)
+        self.activity_summary = _dim("")
+        self.activity_summary.set_hexpand(True)
+        bar.append(self.activity_summary)
+        outer.append(bar)
+
         self.activity_list = _listbox()
         outer.append(_scroll(self.activity_list))
         return outer
 
+    def _activity_query(self) -> str | None:
+        entry = getattr(self, "activity_search", None)
+        text = entry.get_text().strip() if entry is not None else ""
+        return text or None
+
+    def _activity_rule(self) -> str | None:
+        dd = getattr(self, "activity_rule_filter", None)
+        if dd is None or dd.get_selected() == 0:
+            return None
+        item = dd.get_selected_item()
+        name = item.get_string() if item is not None else ""
+        return name or None
+
     def refresh_activity(self):
-        self.activity_list.remove_all()
-        rows = self.sorter.history(limit=100)
-        if not rows:
-            self.activity_list.append(Adw.ActionRow(title="Nothing sorted yet"))
+        if getattr(self, "_activity_refreshing", False):
             return
-        for ts, src, dest in reversed(rows):
-            src_p, dest_p = Path(src), Path(dest)
-            row = Adw.ActionRow(title=src_p.name,
-                                subtitle=f"{fmt(src_p)} → {dest_p.parent.name}/")
-            row.add_suffix(Gtk.Label(label=ts.split(" ")[-1]))
-            self.activity_list.append(row)
+        self._activity_refreshing = True
+        try:
+            index = self.sorter.journal_index()
+            # Keep the rule filter in step with the journal without dropping
+            # the user's selection (and without re-entering this method).
+            dd = getattr(self, "activity_rule_filter", None)
+            if dd is not None:
+                wanted = self._activity_rule()
+                items = ["All rules"] + sorted(index.counts())
+                model = dd.get_model()
+                current = ([model.get_string(i) for i in range(model.get_n_items())]
+                           if model is not None else [])
+                if current != items:
+                    dd.set_model(Gtk.StringList.new(items))
+                    if wanted in items:
+                        dd.set_selected(items.index(wanted))
+            rows = self.sorter.records(limit=200, name=self._activity_query(),
+                                       rule=self._activity_rule())
+            self.activity_list.remove_all()
+            if not rows:
+                self.activity_list.append(Adw.ActionRow(title="Nothing sorted yet"))
+            else:
+                for r in reversed(rows):
+                    src_p, dest_p = Path(r["src"]), Path(r["dest"])
+                    rule = r.get("rule") or "—"
+                    row = Adw.ActionRow(
+                        title=src_p.name,
+                        subtitle=f"{rule} · {fmt(src_p)} → {dest_p.parent.name}/")
+                    row.add_suffix(Gtk.Label(label=r["ts"].split(" ")[-1]))
+                    self.activity_list.append(row)
+            total = len(index)
+            shown = len(rows)
+            self.activity_summary.set_text(
+                f"{shown} of {total} move(s)" if shown != total
+                else f"{total} move(s)")
+        finally:
+            self._activity_refreshing = False
 
     def on_undo(self, _btn):
         if self.sorter.undo(limit=1, dry_run=False) == 0:
@@ -905,6 +984,13 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             self.toast("Restored the last sorted file")
         self.refresh_activity()
+
+    def on_restore(self, _btn):
+        name, rule = self._activity_query(), self._activity_rule()
+        if not (name or rule):
+            self.toast("Search for a file or pick a rule, then Restore")
+            return
+        RestoreDialog(self, name=name, rule=rule).open()
 
     # ----------------------------------------------------------- settings ---
     def _page_settings(self) -> Gtk.Widget:
@@ -2376,6 +2462,103 @@ class AdvancedDialog:
             return
         if self.win.save_rule(self.root, rule, old_name=self.old_name):
             self.dialog.close()
+
+
+class RestoreDialog:
+    """Preview-then-commit restore for the journal entries matching a filter.
+
+    Shows exactly what :meth:`Sorter.undo` would do — sizes, collisions and
+    entries that can no longer be restored — before the user commits, so the
+    dangerous action always has a dry run in front of it.
+    """
+
+    def __init__(self, window: MainWindow, name: str | None = None,
+                 rule: str | None = None):
+        self.win = window
+        self.sorter = window.sorter
+        self.name = name
+        self.rule = rule
+
+        loaded = self.sorter._read_journal()
+        to_undo = self.sorter._select(loaded, None, None, None, None, rule,
+                                      name, None)
+        self.plan = self.sorter.restore_plan(to_undo)
+        actionable = [p for p in self.plan
+                      if p["status"] in ("restore", "collision")]
+
+        self.dialog = Adw.Dialog(title="Restore files")
+        self.dialog.set_content_width(760)
+        self.dialog.set_content_height(640)
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for setter in (box.set_margin_top, box.set_margin_start,
+                       box.set_margin_end):
+            setter(18)
+        box.set_margin_bottom(8)
+
+        box.append(_heading("Restore preview"))
+        scope = []
+        if name:
+            scope.append(f"name like “{name}”")
+        if rule:
+            scope.append(f"rule “{rule}”")
+        box.append(_dim(f"{len(actionable)} file(s) can be restored"
+                        + (f"  ·  {', '.join(scope)}" if scope else "")))
+        box.append(_dim("Files return to their original folders. Occupied names "
+                        "get a “(1)” suffix — nothing is overwritten."))
+
+        listing = _listbox()
+        for item in self.plan:
+            src_p, dest_p = item["src"], item["dest"]
+            status = item["status"]
+            if status == "missing":
+                note = f"missing from {dest_p.parent.name}/"
+            elif status == "already":
+                note = "already back in place"
+            else:
+                parts = [f"from {dest_p.parent.name}/"]
+                if status == "collision":
+                    parts.append(f"name taken → restore as {item['target'].name}")
+                if item["changed"]:
+                    parts.append("size changed")
+                note = " · ".join(parts)
+            row = Adw.ActionRow(title=src_p.name, subtitle=note)
+            size = item.get("size")
+            if isinstance(size, int):
+                row.add_suffix(Gtk.Label(label=_human_size(size)))
+            listing.append(row)
+        box.append(_scroll(listing))
+
+        outer.append(box)
+        outer.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        footer = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        for setter in (footer.set_margin_top, footer.set_margin_bottom,
+                       footer.set_margin_start, footer.set_margin_end):
+            setter(14)
+        cancel = Gtk.Button(label="Cancel")
+        cancel.connect("clicked", lambda _b: self.dialog.close())
+        self.restore = Gtk.Button(label=f"Restore {len(actionable)} file(s)")
+        self.restore.add_css_class("suggested-action")
+        self.restore.set_sensitive(bool(actionable))
+        self.restore.connect("clicked", self._restore)
+        footer.append(cancel)
+        spacer = Gtk.Box()
+        spacer.set_hexpand(True)
+        footer.append(spacer)
+        footer.append(self.restore)
+        outer.append(footer)
+
+        self.dialog.set_child(outer)
+
+    def open(self):
+        self.dialog.present(self.win)
+
+    def _restore(self, _btn):
+        n = self.sorter.undo(name=self.name, rule=self.rule)
+        self.dialog.close()
+        self.win.toast(f"Restored {n} file(s)")
+        self.win.refresh_activity()
 
 
 def run(cfg: Config, migrated: bool = False) -> int:
