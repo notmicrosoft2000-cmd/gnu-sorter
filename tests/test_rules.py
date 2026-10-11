@@ -210,6 +210,7 @@ class TestSettingsDefaults(unittest.TestCase):
         self.assertEqual(DEFAULT_SETTINGS.get("color_scheme"), "default")
         self.assertGreater(DEFAULT_SETTINGS.get("history_max_entries", 0), 0)
         self.assertGreater(DEFAULT_SETTINGS.get("history_max_bytes", 0), 0)
+        self.assertIs(DEFAULT_SETTINGS.get("check_for_updates"), True)
 
     def test_settings_roundtrip(self):
         with tempfile.TemporaryDirectory() as d:

@@ -34,6 +34,11 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
   by CI into a self-hosted OSTree repository on GitHub Pages
   (`…/gnu-sorter/flatpak/`). AppImage was evaluated and dropped in favour of a
   single, more portable Linux package.
+- **Channel-aware, packaging-aware updates**: the update check only ever offers
+  a build from the running channel (`indev`/`alpha`/`beta`/`rc`/`release`). On
+  a Flatpak install it points at `flatpak update` instead of self-replacing,
+  and a new **Check for updates automatically** switch (Settings → Updates)
+  lets you opt out.
 - `tools/release.py`, `RELEASING.md` and a CHANGELOG for a predictable
   `indev → alpha → beta → rc → release` cycle.
 

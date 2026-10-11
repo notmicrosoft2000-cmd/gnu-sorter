@@ -1,12 +1,14 @@
 """Self-update support for the Linux app.
 
-The Linux build is distributed as GitHub Releases source tarballs (GitHub
-generates these automatically for a tagged release). An update therefore is:
+Two install kinds are supported. A **script** install (``install.sh`` /
+``~/.local/share/gnu-sorter``) updates by downloading the release tarball and
+syncing it over the install directory. A **Flatpak** install is read-only, so
+there we only report that an update exists and point at ``flatpak update``.
 
-  1. look up the latest release via the GitHub API,
-  2. download its tarball to a temp dir,
-  3. copy the files over the install directory
-     (~/.local/share/gnu-sorter/app for install.sh installs).
+Updates are **channel-aware**: a copy on ``indev`` is only ever offered
+``indev`` builds, one on ``release`` only stable ones. The channel is derived
+from ``__version__`` (PEP 440): ``.devN`` → indev, ``aN`` → alpha, ``bN`` →
+beta, ``rcN`` → rc, none → release.
 
 The running process keeps the already-imported modules in memory, so the
 updated files take effect on the next launch (/ restart of the watcher).
@@ -15,6 +17,8 @@ updated files take effect on the next launch (/ restart of the watcher).
 from __future__ import annotations
 
 import json
+import os
+import re
 import shutil
 import tempfile
 import urllib.request
@@ -24,8 +28,10 @@ from . import __version__
 
 GITHUB_OWNER = "notmicrosoft2000-cmd"
 GITHUB_REPO = "gnu-sorter"
-LATEST_API = (
-    f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest")
+RELEASES_API = (
+    f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases")
+LATEST_API = f"{RELEASES_API}/latest"
+FLATPAK_ID = "io.neptunepc.Funnel"
 
 _USER_AGENT = f"gnu-sorter/{__version__}"
 
@@ -53,11 +59,6 @@ def _download(url: str, dest: Path, timeout: float = 60) -> None:
         shutil.copyfileobj(resp, fh)
 
 
-def latest_release() -> dict | None:
-    """The newest release object from the GitHub API, or None (offline/404)."""
-    return _http_json(LATEST_API)
-
-
 # -- versions -----------------------------------------------------------
 
 def version_tuple(v: str) -> tuple[int, int, int]:
@@ -75,14 +76,92 @@ def version_tuple(v: str) -> tuple[int, int, int]:
     return tuple((parts + [0, 0, 0])[:3])
 
 
+# Phase ordering within one release number (PEP 440): dev < a < b < rc < final.
+_PHASE_RANK = {"dev": 0, "a": 1, "b": 2, "rc": 3, "final": 4}
+_PHASE_CHANNEL = {"dev": "indev", "a": "alpha", "b": "beta",
+                  "rc": "rc", "final": "release"}
+
+
+def _normalize(v: str) -> str:
+    """Fold a tag (``v3.0.0-rc.1``) into one PEP-440-ish spelling (``3.0.0rc1``)."""
+    s = (v or "").strip().lstrip("vV").lower()
+    s = s.replace("alpha", "a").replace("beta", "b").replace("indev", "dev")
+    return re.sub(r"[-._]?(a|b|rc|dev)\.?(\d*)", r"\1\2", s)
+
+
+def _parse(v: str) -> tuple[tuple[int, ...], str, int]:
+    n = _normalize(v)
+    m = re.match(r"(\d+(?:\.\d+)*)(.*)", n)
+    release = tuple(int(x) for x in m.group(1).split(".")) if m else (0,)
+    rest = m.group(2) if m else ""
+    pm = re.match(r"\.?dev(\d*)", rest)
+    if pm:
+        phase, num = "dev", int(pm.group(1) or 0)
+    else:
+        pm = re.match(r"\.?(a|b|rc)(\d*)", rest)
+        phase, num = (pm.group(1), int(pm.group(2) or 0)) if pm else ("final", 0)
+    rel = tuple(release) + (0,) * max(0, 3 - len(release))
+    return rel, phase, num
+
+
+def version_key(v: str) -> tuple:
+    """A comparable key across channels (PEP 440 ordering)."""
+    rel, phase, num = _parse(v)
+    return rel, _PHASE_RANK[phase], num
+
+
+def channel_of(v: str) -> str:
+    """'indev' | 'alpha' | 'beta' | 'rc' | 'release' for a version or tag."""
+    return _PHASE_CHANNEL[_parse(v)[1]]
+
+
+def install_kind() -> str:
+    """How this copy is installed: 'flatpak', 'script' or 'unknown'."""
+    if os.environ.get("FLATPAK_ID") or Path("/.flatpak-info").is_file():
+        return "flatpak"
+    if install_dir() is not None:
+        return "script"
+    return "unknown"
+
+
+# -- releases -----------------------------------------------------------
+
+def _releases() -> list[dict]:
+    data = _http_json(RELEASES_API + "?per_page=30")
+    return [r for r in data if isinstance(r, dict)] if isinstance(data, list) \
+        else []
+
+
+def latest_release() -> dict | None:
+    """The newest release object from the GitHub API, or None (offline/404)."""
+    return _http_json(LATEST_API)
+
+
+def _best_release() -> dict | None:
+    """The newest release whose channel matches the running version."""
+    channel = channel_of(__version__)
+    best: dict | None = None
+    for rel in _releases():
+        if rel.get("draft"):
+            continue
+        tag = rel.get("tag_name") or ""
+        if not tag or channel_of(tag) != channel:
+            continue
+        if best is None or version_key(tag) > version_key(best.get("tag_name", "")):
+            best = rel
+    return best
+
+
 def check() -> tuple[str, str | None, bool]:
-    """Return (current, latest-tag-or-None, needs-update)."""
-    rel = latest_release()
-    if not rel:
-        return __version__, None, False
-    latest = rel.get("tag_name") or ""
-    return (__version__, latest,
-            bool(latest) and version_tuple(latest) > version_tuple(__version__))
+    """Return (current, best-tag-in-this-channel-or-None, needs-update).
+
+    Channels are exclusive: a copy on ``indev`` is only offered ``indev``
+    builds, and the comparison happens *within* the channel.
+    """
+    best = _best_release()
+    tag = (best or {}).get("tag_name") or None
+    needed = bool(tag) and version_key(tag) > version_key(__version__)
+    return __version__, tag, needed
 
 
 # -- install layout -----------------------------------------------------
@@ -91,11 +170,11 @@ def install_dir() -> Path | None:
     """The app directory this module ships in, or None for non-install.sh uses.
 
     The module lives in ``<install>/gnu_sorter/``, so the install directory is
-    this file's parent's parent. A git checkout also matches, which is handy
-    for testing the update path.
+    this file's parent's parent. Both an ``install.sh`` copy and a git checkout
+    have ``main.py`` + ``gnu_sorter/cli.py`` there; a pip install has neither.
     """
     here = Path(__file__).resolve().parent.parent
-    if (here / "gnu_sorter").is_dir() and (here / "cli.py").is_file():
+    if (here / "main.py").is_file() and (here / "gnu_sorter" / "cli.py").is_file():
         return here
     return None
 
@@ -103,14 +182,23 @@ def install_dir() -> Path | None:
 # -- update -------------------------------------------------------------
 
 def update(dry_run: bool = False) -> tuple[bool, str]:
-    """Download and install the newest release. Returns (ok, message)."""
-    rel = latest_release()
-    if not rel:
+    """Download and install the newest release in this channel.
+
+    Returns ``(ok, message)``. A Flatpak install is read-only, so it never
+    self-replaces: it reports the available version and the command to run.
+    """
+    best = _best_release()
+    if best is None:
         return False, "could not check for updates (offline or no release yet)"
-    tag = rel.get("tag_name") or ""
-    if not tag or version_tuple(tag) <= version_tuple(__version__):
+    tag = best.get("tag_name") or ""
+    if not tag or version_key(tag) <= version_key(__version__):
         return True, f"already up to date ({__version__})."
-    tarball = rel.get("tarball_url")
+
+    if install_kind() == "flatpak":
+        return (False, f"{tag} is available — update the Flatpak with "
+                       f"`flatpak update {FLATPAK_ID}`.")
+
+    tarball = best.get("tarball_url")
     if not tarball:
         return False, f"release {tag} has no source tarball."
     target = install_dir()

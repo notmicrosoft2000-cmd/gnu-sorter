@@ -108,17 +108,21 @@ AppImage pattern is now vestigial).
   an optional later add.
 - Keep `install.sh` for devs/CI but present the Flatpak as the primary download.
 
-### 4.6 — Updates v2 (packaging-aware)
-- Detect how the app was installed at runtime:
-  - **Flatpak**: `/.flatpak-info` exists → the app is read-only; detect "update
-    available" and point the user at `flatpak update` / software center (never
-    self-replace inside the sandbox).
-  - **script install**: keep the existing `updater.py`/`UpdateService`.
-- **Channel-aware**: only offer a build whose channel matches the user's
-  channel (see 4.7); default = `release`. Gate by channel **and** version so the
-  SemVer ordering between `indev`/`alpha`/`beta` never matters.
-- **Opt-out**: `check_for_updates` setting + a manual "Check for updates"
-  everywhere (Linux CLI `--update-check`/`--update` already exist).
+### 4.6 — Updates v2 (packaging-aware)  — **Linux DONE**
+- Detect how the app was installed at runtime (`updater.install_kind()`):
+  - **Flatpak** (`FLATPAK_ID` env or `/.flatpak-info`) → the app is read-only, so
+    we never self-replace: `check()` still compares versions and the GUI/CLI
+    point the user at `flatpak update io.neptunepc.Funnel`.
+  - **script install** → the existing `updater.py` tarball-swap path (also
+    fixed: `install_dir()` now keys off `main.py`, so it actually finds the
+    install).
+- **Channel-aware**: `channel_of()` derives the channel from `__version__`
+  (PEP 440: `.devN`→indev, `aN`→alpha, `bN`→beta, `rcN`→rc, else release) and
+  `check()` only ever offers a release whose channel matches, comparing within
+  the channel via `version_key()`. No SemVer-vs-PEP440 ordering puzzles.
+- **Opt-out**: `check_for_updates` setting (default on) + a Settings → Updates
+  switch; manual check stays in the window menu and CLI
+  (`--update-check`/`--update`).
 
 ### 4.7 — Release cycle & channels (the "predictable" part)
 See §4 below. Deliverable: `RELEASING.md` + CI + a bump/tag script.
@@ -189,8 +193,10 @@ SemVer 2.0.0 with pre-release identifiers, one channel each:
    advanced editor (`Gtk.ColorDialogButton`) with a coloured dot on the rules
    page. Existing `icon`/`color` metadata is still preserved through
    `normalize_rule`.
-5. **4.6 Updates v2** (packaging-aware, channel-aware, opt-out).  ← after 4.5 so
-   the install-type detection targets real formats.
+5. **4.6 Updates v2** (packaging-aware, channel-aware, opt-out).
+   — **Linux DONE**: install-kind detection (Flatpak vs script),
+   channel-filtered update checks, and a `check_for_updates` opt-out
+   (Settings → Updates). `install_dir()` fixed to key off `main.py`.
 6. **4.5 Packaging** (Flatpak) on Linux; exe stays on Windows.
 7. **4.7 Release cycle** (`RELEASING.md`, `tools/release.py`, nightly + tag CI).
    — **Linux DONE** (`tools/release.py` + `tests/test_release.py`,

@@ -286,6 +286,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _background_update_check(self) -> bool:
         """One-shot startup check (silent unless an update is installed)."""
+        if not self.cfg.load_settings().get("check_for_updates", True):
+            return False
         threading.Thread(target=lambda: self._update_worker(notify=False),
                          daemon=True).start()
         return False
@@ -297,6 +299,13 @@ class MainWindow(Adw.ApplicationWindow):
             if not needed:
                 if notify:
                     GLib.idle_add(self.toast, f"Up to date — version {current}")
+                return
+            if updater.install_kind() == "flatpak":
+                # Read-only sandbox: never self-replace, just point at Flatpak.
+                GLib.idle_add(
+                    self.toast,
+                    f"{latest} is available — run "
+                    f"`flatpak update {updater.FLATPAK_ID}`")
                 return
             GLib.idle_add(self.toast, f"Downloading {latest}…")
             ok, msg = updater.update(dry_run=False)
@@ -1131,6 +1140,28 @@ class MainWindow(Adw.ApplicationWindow):
                          "cautious_downloads", bool)
         extras.add(cautious)
         page.add(extras)
+
+        updates = Adw.PreferencesGroup(
+            title="Updates",
+            description="Funnel only offers builds from its own channel "
+                        "(indev, alpha, beta, rc or release).")
+        check_updates = Adw.SwitchRow(
+            title="Check for updates automatically",
+            subtitle="Look for a newer build shortly after launch",
+            active=bool(s.get("check_for_updates", True)))
+        check_updates.connect("notify::active", self._set_setting,
+                              "check_for_updates", bool)
+        updates.add(check_updates)
+        try:
+            from . import updater as _updater
+            if _updater.install_kind() == "flatpak":
+                updates.add(Adw.ActionRow(
+                    title="Installed as a Flatpak",
+                    subtitle="Updates arrive through `flatpak update "
+                             f"{_updater.FLATPAK_ID}`"))
+        except Exception:
+            pass
+        page.add(updates)
 
         history = Adw.PreferencesGroup(
             title="History",

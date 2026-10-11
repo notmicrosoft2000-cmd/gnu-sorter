@@ -91,6 +91,8 @@ DEFAULT_SETTINGS = {
     "watch_interval": 2,
     "notifications": True,
     "dry_run_default": False,
+    # Look for a newer build in this channel shortly after launch.
+    "check_for_updates": True,
     # Appearance: "default" (follow the system), "light" or "dark".
     "color_scheme": "default",
     # Journal retention: trim once the log passes `history_max_bytes`, keeping

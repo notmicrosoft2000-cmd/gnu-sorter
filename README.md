@@ -82,6 +82,9 @@ gnu-sorter --update         # download + install the newest release
 
 - The **GUI** checks for updates a few seconds after launch and installs them
   automatically; there is also a *Check for updates…* item in the window menu.
+- The check is **channel-aware**: a build only offers updates from the same
+  channel (`indev` / `alpha` / `beta` / `rc` / `release`). Turn the automatic
+  check off in **Settings → Updates**.
 - If the watcher service is running, `gnu-sorter --update` prints the
   `systemctl --user restart gnu-sorter` command to apply it.
 
