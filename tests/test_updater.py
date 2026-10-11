@@ -75,9 +75,12 @@ class UpdaterTests(unittest.TestCase):
         self.assertIn("already up to date", msg)
 
     def test_full_update(self):
+        # A tag strictly newer than the running version, so this stays valid
+        # across version bumps.
+        newer = "v%d.0.0" % (updater.version_tuple(updater.__version__)[0] + 1)
         archive = self._tmp / "release.tar.gz"
-        _make_tarball(archive, "v2.6.0")
-        self.fake_latest("v2.6.0")
+        _make_tarball(archive, newer)
+        self.fake_latest(newer)
         updater.install_dir = lambda: self._tmp
         updater._download = lambda url, dest, timeout=60: shutil.copy2(
             archive, dest)
@@ -88,7 +91,7 @@ class UpdaterTests(unittest.TestCase):
         (self._tmp / "old_thing.txt").write_text("gone")
         ok, msg = updater.update()
         self.assertTrue(ok, msg)
-        self.assertEqual((self._tmp / "README.md").read_text(), "# v2.6.0\n")
+        self.assertEqual((self._tmp / "README.md").read_text(), f"# {newer}\n")
         self.assertTrue((self._tmp / "main.py").exists())
         self.assertFalse((self._tmp / "gnu_sorter" / "__pycache__").exists())
         self.assertFalse((self._tmp / "old_thing.txt").exists())

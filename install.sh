@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Funnel v2.0 — user-local installer
+# Funnel — user-local installer
 # - Installs app to ~/.local/share/gnu-sorter/app/
 # - Symlinks ~/.local/bin/gnu-sorter -> app/main.py
 # - Installs desktop entry, icons (SVG + PNGs), KDE service menu

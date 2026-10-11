@@ -1,6 +1,10 @@
 """Funnel — sort any folder automatically."""
 
-__version__ = "2.5.0"
+# Single source of truth for the version. `pyproject.toml` reads this via a
+# dynamic `attr`, and `tools/release.py` bumps this one line. The channel is
+# derived from the suffix (PEP 440): `.devN`→indev, `aN`→alpha, `bN`→beta,
+# `rcN`→rc, none→release.
+__version__ = "3.0.0.dev0"
 APP_NAME = "Funnel"
 APP_ID = "io.neptunepc.Funnel"
 CREATOR = "notmicrosoft2000-cmd"

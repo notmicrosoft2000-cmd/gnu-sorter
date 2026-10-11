@@ -1,5 +1,5 @@
 <p align="center"><img src="docs/icon.png" width="128" alt="Funnel logo"></p>
-<h1 align="center">Funnel v2.0</h1>
+<h1 align="center">Funnel</h1>
 <p align="center">Automatically sort any folder(s) with per-folder custom rules. GTK4 + libadwaita for Linux.</p>
 
 ## Highlights
@@ -123,7 +123,7 @@ gnu-sorter --import-journal ~/history-export.log
 ## About
 
 - Creator: **notmicrosoft2000-cmd**
-- Version: **2.0.0**
+- Version: **3.0** (development — see [Releases](https://github.com/notmicrosoft2000-cmd/gnu-sorter/releases))
 - Website: https://notmicrosoft2000-cmd.github.io/gnu-sorter/
 - Repository: https://github.com/notmicrosoft2000-cmd/gnu-sorter
 - Issues: https://github.com/notmicrosoft2000-cmd/gnu-sorter/issues

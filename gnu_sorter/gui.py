@@ -1,4 +1,4 @@
-"""GTK4 / libadwaita interface for Funnel (v2.0).
+"""GTK4 / libadwaita interface for Funnel.
 
 Layout notes:
   * Rules page is a split view: watched folders on the left, that folder's

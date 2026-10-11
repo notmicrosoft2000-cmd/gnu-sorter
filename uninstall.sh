@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Funnel v2.0 — user-local uninstaller
+# Funnel — user-local uninstaller
 # no --purge: keep config (~/.config/gnu-sorter) and history (~/.local/share/gnu-sorter/history.log)
 # --purge: remove config + history too
 

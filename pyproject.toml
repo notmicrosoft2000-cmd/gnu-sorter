@@ -1,6 +1,10 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "gnu-sorter"
-version = "2.5.0"
+dynamic = ["version"]
 description = "GTK4/libadwaita app that sorts any folder(s) with user-defined rules."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,6 +23,9 @@ tray = ["pystray"]
 
 [project.scripts]
 gnu-sorter = "gnu_sorter.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "gnu_sorter.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["gnu_sorter*"]
