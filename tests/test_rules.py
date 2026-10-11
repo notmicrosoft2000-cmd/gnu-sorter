@@ -204,5 +204,23 @@ class TestRuleCounts(unittest.TestCase):
             self.assertEqual(sum(counts.values()), 3)
 
 
+class TestSettingsDefaults(unittest.TestCase):
+    def test_phase4_settings_present(self):
+        from gnu_sorter.config import DEFAULT_SETTINGS
+        self.assertEqual(DEFAULT_SETTINGS.get("color_scheme"), "default")
+        self.assertGreater(DEFAULT_SETTINGS.get("history_max_entries", 0), 0)
+        self.assertGreater(DEFAULT_SETTINGS.get("history_max_bytes", 0), 0)
+
+    def test_settings_roundtrip(self):
+        with tempfile.TemporaryDirectory() as d:
+            cfg = Config(Path(d) / "cfg")
+            cfg.ensure_defaults()
+            cfg.save_settings({"color_scheme": "dark",
+                               "history_max_entries": 42})
+            loaded = cfg.load_settings()
+            self.assertEqual(loaded.get("color_scheme"), "dark")
+            self.assertEqual(loaded.get("history_max_entries"), 42)
+
+
 if __name__ == "__main__":
     unittest.main()

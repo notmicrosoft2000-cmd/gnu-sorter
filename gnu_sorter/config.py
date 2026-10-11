@@ -91,6 +91,8 @@ DEFAULT_SETTINGS = {
     "watch_interval": 2,
     "notifications": True,
     "dry_run_default": False,
+    # Appearance: "default" (follow the system), "light" or "dark".
+    "color_scheme": "default",
     # Journal retention: trim once the log passes `history_max_bytes`, keeping
     # the most recent `history_max_entries` (a full copy is saved as .bak).
     "history_max_entries": 2500,

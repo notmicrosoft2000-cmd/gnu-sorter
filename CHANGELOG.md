@@ -27,6 +27,9 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
   also selectable in the Restore dialog.
 - **Configurable history retention**: `history_max_entries` and
   `history_max_bytes` (Settings → History), used when the journal trims itself.
+- **Appearance**: pick System / Light / Dark in Settings (remembered across
+  launches), and give any rule an optional **accent colour** (rules page shows a
+  matching dot).
 - `tools/release.py`, `RELEASING.md` and a CHANGELOG for a predictable
   `indev → alpha → beta → rc → release` cycle.
 

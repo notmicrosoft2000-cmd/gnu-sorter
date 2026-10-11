@@ -185,6 +185,11 @@ SemVer 2.0.0 with pre-release identifiers, one channel each:
    in the Activity filter bar + Restore dialog, and configurable retention
    (`history_max_entries` / `history_max_bytes`, now in Settings).
 4. **4.4 Customization & settings.**
+   — **Linux DONE**: Settings → Appearance (System / Light / Dark, remembered,
+   applied via `Adw.StyleManager`); per-rule **accent colour** picker in the
+   advanced editor (`Gtk.ColorDialogButton`) with a coloured dot on the rules
+   page. Existing `icon`/`color` metadata is still preserved through
+   `normalize_rule`.
 5. **4.6 Updates v2** (packaging-aware, channel-aware, opt-out).  ← after 4.5 so
    the install-type detection targets real formats.
 6. **4.5 Packaging** (Flatpak + AppImage) on Linux; exe stays on Windows.

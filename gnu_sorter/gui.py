@@ -61,6 +61,7 @@ class FunnelApp(Adw.Application):
         self.set_accels_for_action("app.quit", ["<Control>q"])
 
     def on_activate(self, _app):
+        apply_color_scheme(self.cfg)
         if self.window is None:
             self.window = MainWindow(self, self.cfg, self.sorter)
         self.window.present()
@@ -69,6 +70,21 @@ class FunnelApp(Adw.Application):
 
 
 # ---------------------------------------------------------------- helpers ---
+
+_SCHEMES = {"default": Adw.ColorScheme.DEFAULT,
+            "light": Adw.ColorScheme.FORCE_LIGHT,
+            "dark": Adw.ColorScheme.FORCE_DARK}
+
+
+def apply_color_scheme(cfg: Config) -> None:
+    """Apply the saved appearance choice (system / light / dark)."""
+    name = str(cfg.load_settings().get("color_scheme", "default")).lower()
+    try:
+        Adw.StyleManager.get_default().set_color_scheme(
+            _SCHEMES.get(name, Adw.ColorScheme.DEFAULT))
+    except Exception:
+        pass
+
 
 def _heading(text: str) -> Gtk.Label:
     lbl = Gtk.Label(label=text, xalign=0)
@@ -97,6 +113,21 @@ def _scroll(child: Gtk.Widget) -> Gtk.ScrolledWindow:
     sw.set_vexpand(True)
     sw.set_child(child)
     return sw
+
+
+def _color_dot(color: str) -> Gtk.Widget:
+    """A small dot painted in ``color`` (any CSS colour), for rule rows."""
+    dot = Gtk.Label(label="\u25cf")
+    dot.set_valign(Gtk.Align.CENTER)
+    try:
+        provider = Gtk.CssProvider()
+        provider.load_from_string(f"label {{ color: {color}; font-size: 14px; }}")
+        dot.get_style_context().add_provider(
+            provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+    except Exception:
+        pass
+    dot.set_tooltip_text("Accent colour")
+    return dot
 
 
 def _dim(text: str) -> Gtk.Label:
@@ -635,6 +666,9 @@ class MainWindow(Adw.ApplicationWindow):
         num.set_valign(Gtk.Align.CENTER)
         row.add_prefix(num)
 
+        if cat.get("color"):
+            row.add_prefix(_color_dot(str(cat["color"])))
+
         switch = Gtk.Switch(active=cat.get("enabled") is not False,
                             valign=Gtk.Align.CENTER)
         switch.set_tooltip_text("Include this rule")
@@ -1042,6 +1076,17 @@ class MainWindow(Adw.ApplicationWindow):
         about_group.add(self.about_status)
         page.add(about_group)
 
+        look = Adw.PreferencesGroup(title="Appearance")
+        scheme = Adw.ComboRow(
+            title="Colour scheme",
+            subtitle="Follow the system, or force light or dark")
+        scheme.set_model(Gtk.StringList.new(["System", "Light", "Dark"]))
+        scheme.set_selected({"default": 0, "light": 1, "dark": 2}.get(
+            str(s.get("color_scheme", "default")).lower(), 0))
+        scheme.connect("notify::selected", self._on_scheme)
+        look.add(scheme)
+        page.add(look)
+
         behaviour = Adw.PreferencesGroup(title="Behaviour")
         stable = Adw.SpinRow.new_with_range(0, 30, 1)
         stable.set_title("Stability window")
@@ -1123,6 +1168,14 @@ class MainWindow(Adw.ApplicationWindow):
         s[key] = caster(value)
         self.cfg.save_settings(s)
         self.sorter.reload()
+
+    def _on_scheme(self, row, _param):
+        names = ["default", "light", "dark"]
+        idx = row.get_selected()
+        s = self.cfg.load_settings()
+        s["color_scheme"] = names[idx] if 0 <= idx < len(names) else "default"
+        self.cfg.save_settings(s)
+        apply_color_scheme(self.cfg)
 
     def on_start_toggled(self, row, _param):
         if row.get_active():
@@ -2358,6 +2411,29 @@ class AdvancedDialog:
             row.connect("changed", self._preview)
             refine.append(row)
         refine.append(self.enabled_row)
+
+        self._color = self.original.get("color") or None
+        self.color_row = Adw.ActionRow(
+            title="Accent colour",
+            subtitle="Optional \u2014 shows a coloured dot beside this rule")
+        self.color_btn = Gtk.ColorDialogButton()
+        self.color_btn.set_valign(Gtk.Align.CENTER)
+        color_dialog = Gtk.ColorDialog()
+        color_dialog.set_with_alpha(False)
+        self.color_btn.set_dialog(color_dialog)
+        if self._color:
+            rgba = Gdk.RGBA()
+            if rgba.parse(str(self._color)):
+                self.color_btn.set_rgba(rgba)
+        self.color_btn.connect("notify::rgba", self._on_color_picked)
+        clear = Gtk.Button(icon_name="edit-clear-symbolic")
+        clear.add_css_class("flat")
+        clear.set_tooltip_text("No accent colour")
+        clear.set_valign(Gtk.Align.CENTER)
+        clear.connect("clicked", self._clear_color)
+        self.color_row.add_suffix(self.color_btn)
+        self.color_row.add_suffix(clear)
+        refine.append(self.color_row)
         box.append(refine)
 
         self.preview = Gtk.Label(xalign=0, wrap=True)
@@ -2438,6 +2514,28 @@ class AdvancedDialog:
         self._rebuild_chips()
         self._preview()
 
+    @staticmethod
+    def _hex(rgba) -> str:
+        return "#{:02x}{:02x}{:02x}".format(
+            round(rgba.red * 255), round(rgba.green * 255),
+            round(rgba.blue * 255))
+
+    def _on_color_picked(self, *_):
+        if getattr(self, "_clearing_color", False):
+            return
+        rgba = self.color_btn.get_rgba()
+        self._color = self._hex(rgba) if rgba is not None else None
+        self._preview()
+
+    def _clear_color(self, _btn):
+        self._clearing_color = True
+        try:
+            self.color_btn.set_rgba(Gdk.RGBA())
+        finally:
+            self._clearing_color = False
+        self._color = None
+        self._preview()
+
     def _browse(self, _btn):
         if not hasattr(Gtk, "FileDialog"):
             self.win.toast("The folder picker needs a newer GTK")
@@ -2486,9 +2584,10 @@ class AdvancedDialog:
             rule["enabled"] = False
         if self.match_all_row.get_active():
             rule["match_mode"] = "all"
-        for key in ("icon", "color"):
-            if self.original.get(key):
-                rule[key] = self.original[key]
+        if self.original.get("icon"):
+            rule["icon"] = self.original["icon"]
+        if self._color:
+            rule["color"] = self._color
         return rule
 
     def _preview(self, *_):
