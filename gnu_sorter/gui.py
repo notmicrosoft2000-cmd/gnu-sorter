@@ -31,7 +31,7 @@ from . import service  # noqa: E402
 
 # --------------------------------------------------------------------- app ---
 
-class GNUSorterApp(Adw.Application):
+class FunnelApp(Adw.Application):
     def __init__(self, cfg: Config, migrated: bool = False):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.cfg = cfg
@@ -45,6 +45,7 @@ class GNUSorterApp(Adw.Application):
         handlers = {
             "about": lambda *_: self.window and self.window.show_about(),
             "sort-now": lambda *_: self.window and self.window.on_sort_now(None),
+            "update": lambda *_: self.window and self.window.on_update_clicked(),
             "quit": lambda *_: self.quit(),
         }
         for name, handler in handlers.items():
@@ -121,7 +122,7 @@ def _split_exts(text: str) -> list[str]:
 # ------------------------------------------------------------- main window ---
 
 class MainWindow(Adw.ApplicationWindow):
-    def __init__(self, app: GNUSorterApp, cfg: Config, sorter: Sorter):
+    def __init__(self, app: FunnelApp, cfg: Config, sorter: Sorter):
         super().__init__(application=app)
         self.app = app
         self.cfg = cfg
@@ -204,9 +205,6 @@ class MainWindow(Adw.ApplicationWindow):
     def _add_window_actions(self) -> None:
         action = Gio.SimpleAction.new("advanced", None)
         action.connect("activate", lambda *_: self.on_advanced())
-        self.add_action(action)
-        action = Gio.SimpleAction.new("update", None)
-        action.connect("activate", self.on_update_clicked)
         self.add_action(action)
         for i, (label, _rules) in enumerate(PRESETS):
             act = Gio.SimpleAction.new(f"preset-{i}", None)
@@ -1207,5 +1205,5 @@ class AdvancedDialog:
 
 def run(cfg: Config, migrated: bool = False) -> int:
     Adw.init()
-    app = GNUSorterApp(cfg, migrated=migrated)
+    app = FunnelApp(cfg, migrated=migrated)
     return app.run([])

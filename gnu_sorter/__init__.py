@@ -2,7 +2,7 @@
 
 __version__ = "2.5.0"
 APP_NAME = "Funnel"
-APP_ID = "io.neptunepc.GNUSorter"
+APP_ID = "io.neptunepc.Funnel"
 CREATOR = "notmicrosoft2000-cmd"
 WEBSITE = "https://notmicrosoft2000-cmd.github.io/gnu-sorter/"
 REPO = "https://github.com/notmicrosoft2000-cmd/gnu-sorter"

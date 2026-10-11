@@ -288,13 +288,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.tray:
         try:
             from .tray import Tray
-            from .gui import GNUSorterApp
+            from .gui import FunnelApp
             import gi
             gi.require_version("Gtk", "4.0")
             gi.require_version("Adw", "1")
             from gi.repository import Adw, GLib
             Adw.init()
-            app = GNUSorterApp(cfg, migrated=migrated)
+            app = FunnelApp(cfg, migrated=migrated)
             tray = Tray(
                 on_open_gui=lambda: GLib.idle_add(
                     lambda: app.window.present() if app.window else app.activate()),

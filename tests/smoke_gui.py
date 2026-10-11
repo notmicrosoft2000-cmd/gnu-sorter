@@ -20,7 +20,7 @@ gi.require_version("Graphene", "1.0")
 from gi.repository import Adw, Gtk, Gsk, GLib, Graphene  # noqa: E402
 
 from gnu_sorter.config import Config  # noqa: E402
-from gnu_sorter.gui import GNUSorterApp, RuleWizard, AdvancedDialog  # noqa: E402
+from gnu_sorter.gui import FunnelApp, RuleWizard, AdvancedDialog  # noqa: E402
 
 OUT = pathlib.Path(os.environ.get("GS_SMOKE_OUT", "/tmp/opencode/gsui"))
 
@@ -71,7 +71,7 @@ def main() -> int:
     own.append({"name": "Comics", "extensions": ["cbz", "cbr"]})
     cfg.save_rules_for(root2, own)
 
-    app = GNUSorterApp(cfg, migrated=False)
+    app = FunnelApp(cfg, migrated=False)
     state = {"step": 0, "wiz": None, "adv": None}
 
     def run_steps() -> bool:

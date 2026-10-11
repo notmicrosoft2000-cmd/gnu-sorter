@@ -9,4 +9,4 @@ Terminal=false
 Categories=Utility;FileTools;System;
 Keywords=sort;organize;folder;download;tidy;
 StartupNotify=true
-StartupWMClass=io.neptunepc.GNUSorter
+StartupWMClass=io.neptunepc.Funnel
