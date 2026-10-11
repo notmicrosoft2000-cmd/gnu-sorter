@@ -159,8 +159,10 @@ the Windows engine ignores those keys entirely.
 > Full design + sub-slice plan: [`PHASE3_DESIGN.md`](PHASE3_DESIGN.md).
 
 ### Status
-- Linux: IN PROGRESS (schema + plain-English + rules page landing first).
-- Windows: PENDING (mirrors Linux after each slice).
+- Linux: **DONE** — rules page overhaul + 6-step wizard + journal
+  search/index/backup/restore all on `main`.
+- Windows: **DONE** — schema/engine parity, rules page, the six-step wizard and
+  the same journal search/index/backup/restore, built green by MSBuild CI.
 
 ---
 
@@ -188,7 +190,7 @@ the Windows engine ignores those keys entirely.
 |------|-------|-------|---------|
 | 1 | Download detection (two-tier hold) | ✅ engine+cli+gui+tests on main | ✅ pushed `0b9f50f`, MSBuild CI validating |
 | 2 | Journal v2 & restore | ✅ done (`tests/test_journal.py`, CLI selectors, rotation, v2 schema) | ✅ engine+Activity (v2 schema, selectors, collision-safe restore, rotation, repair, sweep-undo) |
-| 3 | Rule wizard (6 steps) + rules page + journal search | 🔨 rules page + advanced editor + 6-step wizard + journal search/index/backup/restore all done; Phase 3 complete pending Windows mirror ([design](PHASE3_DESIGN.md)) | 🔨 schema/engine parity + rules page done; wizard + journal mirror next |
+| 3 | Rule wizard (6 steps) + rules page + journal search | ✅ done — rules page + advanced editor + 6-step wizard + journal search/index/backup/restore ([design](PHASE3_DESIGN.md)) | ✅ done — schema/engine parity, rules page, 6-step wizard, journal search/index/backup/restore (MSBuild CI green) |
 | 4 | Design & mascot | ⏳ | ⏳ |
 
 Every phase lands on `main` incrementally; releases ride on future tags

@@ -19,18 +19,18 @@
 
 Shared keys (see `config.py`), all optional except `name`:
 
-| key | meaning | Linux | Windows today |
+| key | meaning | Linux | Windows |
 |---|---|---|---|
 | `name` | destination folder (may be `Photos/Screenshots`) | ✅ | ✅ |
 | `extensions` | end-of-name suffixes | ✅ | ✅ |
 | `match_name_regex` | name contains / matches | ✅ | ✅ |
-| `enabled` | `false` → skipped entirely | ✅ engine | ❌ ignored |
-| `match_all` | catch-all (matches everything) | ✅ engine | ❌ ignored |
-| `exclude_name_regex` | veto if the name matches | ✅ engine | ❌ ignored |
-| `min_size_mb` / `max_size_mb` | size bounds | ✅ engine | ❌ ignored |
-| `modified_within_days` | recency bound | ✅ engine | ❌ ignored |
+| `enabled` | `false` → skipped entirely | ✅ engine | ✅ engine |
+| `match_all` | catch-all (matches everything) | ✅ engine | ✅ engine |
+| `exclude_name_regex` | veto if the name matches | ✅ engine | ✅ engine |
+| `min_size_mb` / `max_size_mb` | size bounds | ✅ engine | ✅ engine |
+| `modified_within_days` | recency bound | ✅ engine | ✅ engine |
 | `match_mode` | `any` (OR, default) or `all` (AND) | ✅ engine | ✅ engine |
-| `icon` / `color` | UI-only presentation metadata | ⏳ add | ⏳ add |
+| `icon` / `color` | UI-only presentation metadata | ✅ preserved | ✅ preserved |
 
 > **Priority = array order.** First enabled positive rule that matches wins.
 > `match_all` is the catch-all fallback and normally goes last.
@@ -176,8 +176,16 @@ dark/light. Data comes from the engine's `classify()` (one pass over the folder)
    (`JournalIndex`, name/glob + batch + date selectors, restore preview &
    `--restore-into`, `--backup-journal`, journal/rules export & import, and an
    Activity search bar + preview-then-commit restore dialog.)
-5. **Windows mirror** of 1–4 (native stepper, Fluent icons).
-6. Mark Phase 3 done; Phase 4 art lands on the seams above.
+5. **Windows mirror** of 1–4 (native stepper, Fluent icons). — **DONE**
+   (`RuleText`/schema parity + `match_mode` engine + rules page with “N sorted”
+   badges and a search box; `SortEngine` journal selectors / `JournalIndex` /
+   `RestorePlan` / `BackupJournal` / `ExportJournal` / `ImportJournal` with an
+   Activity search + rule filter + preview-then-commit restore dialog; the
+   six-step `RuleWizardDialog` (a code-built `ContentDialog`) with a type-ahead
+   extension picker, folder picker, up/down priority moves, plain-English review
+   and a custom “files flow into the folder” composition animation. Built green
+   by the `Build Windows (x64)` CI: `5cf64e6`, `92131cd`, `fc09427`, `56bdbf7`.)
+6. Mark Phase 3 done; Phase 4 art lands on the seams above. — **DONE** (both apps)
 
 ## 11. Locked decisions
 
