@@ -100,8 +100,17 @@ Activity tab lists past moves.
 - **Killer UX:** Undo from the notification — "Moved 12 files to Documents"
   with an Undo action (libnotify actions on Linux, toast buttons on Windows).
 
-### Status
-- Linux + Windows: PENDING (Phase 2).
+### Linux (DONE — Phase 2)
+- **Journal v2:** entries include `v:2`, `id`, `batch` (sweep op id), `rule`, `root`, `size`, `mtime`. Backwards-compatible with v1 JSON and legacy tab-separated lines.
+- **Rich selectors:** `records()`/`undo()` accept `limit`, `since`/`before` (durations `30m,2h,7d` or timestamps `YYYY-MM-DD[ HH:MM:SS]`), `folder`, `rule` (case-insensitive).
+- **Undo improvements:** collision-safe restore (if source occupied, restore to `name (1).ext`); already-restored detection via size+mtime (drops from journal); warns if size changed; keeps un-reversible rows on failure.
+- **CLI:** `--journal` (newest-first listing; selectors + `--repair`), `--restore` (requires a selector).
+- **Rotation:** trims to last ~2500 entries when history grows beyond 1 MB.
+- `tests/test_journal.py`: 10 tests validating rich fields, batching, selectors, collision/restore semantics, legacy formats, repair, rotation.
+
+### Windows (TODO — Phase 2b)
+- Mirror journal v2 schema, selectors and collision-safe/verification logic in C# `SortEngine` (History/Undo). Keep legacy parsing intact.
+- Add the same CLI-like restore selectors and prepare for an Undo action hook for toast notifications.
 
 ---
 
