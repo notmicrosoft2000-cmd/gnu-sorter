@@ -149,12 +149,37 @@ class TestClassify(unittest.TestCase):
     def test_match_mode_all_requires_every_matcher(self):
         with tempfile.TemporaryDirectory() as d:
             sorter, _ = _sorter(Path(d))
-            # note: `all` semantics land with the engine decision; today the
-            # compiled engine only knows any() so both files must match the ext.
             rules = [{"name": "Shots", "extensions": ["png"],
-                      "match_mode": "all"}]
-            out = sorter.classify(["a.png"], rules=rules)
-            self.assertEqual(out["a.png"], "Shots")
+                      "match_name_regex": "shot", "match_mode": "all"}]
+            out = sorter.classify(
+                ["a_shot.png", "shot.txt", "plain.png"], rules=rules)
+            self.assertEqual(out["a_shot.png"], "Shots")   # both matchers hit
+            self.assertEqual(out["shot.txt"], "Needs-review")  # ext fails
+            self.assertEqual(out["plain.png"], "Needs-review")  # regex fails
+
+    def test_default_any_mode_matches_either(self):
+        with tempfile.TemporaryDirectory() as d:
+            sorter, _ = _sorter(Path(d))
+            rules = [{"name": "Shots", "extensions": ["png"],
+                      "match_name_regex": "shot"}]
+            out = sorter.classify(["shot.txt", "plain.png"], rules=rules)
+            self.assertEqual(out["shot.txt"], "Shots")     # regex alone
+            self.assertEqual(out["plain.png"], "Shots")    # extension alone
+
+    def test_all_mode_with_only_extensions_still_matches(self):
+        with tempfile.TemporaryDirectory() as d:
+            sorter, _ = _sorter(Path(d))
+            rules = [{"name": "Pics", "extensions": ["jpg"], "match_mode": "all"}]
+            out = sorter.classify(["a.jpg", "b.txt"], rules=rules)
+            self.assertEqual(out["a.jpg"], "Pics")
+            self.assertEqual(out["b.txt"], "Needs-review")
+
+    def test_all_mode_empty_rule_never_matches(self):
+        with tempfile.TemporaryDirectory() as d:
+            sorter, _ = _sorter(Path(d))
+            rules = [{"name": "Nope", "match_mode": "all"}]
+            out = sorter.classify(["a.jpg"], rules=rules)
+            self.assertEqual(out["a.jpg"], "Needs-review")
 
 
 class TestRuleCounts(unittest.TestCase):

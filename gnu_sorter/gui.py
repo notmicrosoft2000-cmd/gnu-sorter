@@ -1312,6 +1312,7 @@ class AdvancedDialog:
         self.old_name = self.original.get("name")
         self.exts = [str(e).lstrip(".")
                      for e in self.original.get("extensions", [])]
+        self._building = True
 
         self.dialog = Adw.Dialog(
             title="Edit rule" if self.old_name else "Advanced rule")
@@ -1370,6 +1371,15 @@ class AdvancedDialog:
         self.ext_chips.set_column_spacing(6)
         box.append(self.ext_chips)
 
+        mode_box = _listbox()
+        self.match_all_row = Adw.SwitchRow(
+            title="Require every condition",
+            subtitle="Off matches any condition (OR); on matches all (AND)")
+        self.match_all_row.set_active(self.original.get("match_mode") == "all")
+        self.match_all_row.connect("notify::active", self._preview)
+        mode_box.append(self.match_all_row)
+        box.append(mode_box)
+
         # --- refine --------------------------------------------------
         box.append(self._section("Fine-tune (optional)"))
         refine = _listbox()
@@ -1414,6 +1424,7 @@ class AdvancedDialog:
 
         self.dialog.set_child(outer)
         self._rebuild_chips()
+        self._building = False
         self._preview()
 
     # -- helpers ------------------------------------------------------
@@ -1513,12 +1524,16 @@ class AdvancedDialog:
                     pass
         if not self.enabled_row.get_active():
             rule["enabled"] = False
-        for key in ("icon", "color", "match_mode"):
+        if self.match_all_row.get_active():
+            rule["match_mode"] = "all"
+        for key in ("icon", "color"):
             if self.original.get(key):
                 rule[key] = self.original[key]
         return rule
 
     def _preview(self, *_):
+        if getattr(self, "_building", False):
+            return
         normalized = normalize_rule(self._build_rule())
         if normalized is None:
             self.preview.set_text("Give the rule a destination folder name.")

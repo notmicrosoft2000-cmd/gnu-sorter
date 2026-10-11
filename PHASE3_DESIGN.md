@@ -29,7 +29,7 @@ Shared keys (see `config.py`), all optional except `name`:
 | `exclude_name_regex` | veto if the name matches | ✅ engine | ❌ ignored |
 | `min_size_mb` / `max_size_mb` | size bounds | ✅ engine | ❌ ignored |
 | `modified_within_days` | recency bound | ✅ engine | ❌ ignored |
-| `match_mode` | `any` (OR, default) or `all` (AND) | ⏳ decision | ⏳ decision |
+| `match_mode` | `any` (OR, default) or `all` (AND) | ✅ engine | ✅ engine |
 | `icon` / `color` | UI-only presentation metadata | ⏳ add | ⏳ add |
 
 > **Priority = array order.** First enabled positive rule that matches wins.
@@ -38,18 +38,21 @@ Shared keys (see `config.py`), all optional except `name`:
 `normalize_rule` currently rebuilds each rule from known keys, so UI metadata
 (`icon`/`color`) is dropped on save — the schema pass must preserve them.
 
-### `match_mode` — the one open question
+### `match_mode` — decided: any/all toggle (default `any`)
 
 Right now every rule is an **OR**: a file matches if its extension is in the
 list **or** its name matches the regex.
 
-- **Any** (today): broad. "`png`/`jpg` **or** the name says screenshot."
+- **Any** (today, default): broad. "`png`/`jpg` **or** the name says screenshot."
 - **All**: precise. "must be an image **and** the name says screenshot **and**
   bigger than 2 MB" — e.g. a rule for *large* screenshots only.
 
-Proposal: a per-rule **Match: any / all** toggle in the fine-tune step, stored as
-`match_mode` (default `any`, so nothing changes for existing rules). Recommendation:
-**add it.**
+**Decision (user, Phase 3):** add a per-rule **Match: any / all** toggle in the
+fine-tune step, stored as `match_mode` (default `any`, so nothing changes for
+existing rules). **Implemented** in both engines: `any` = OR across the
+specified matchers; `all` = every *specified* matcher must hit (the `match_all`
+catch-all counts as always true; a rule with no matchers never matches). The
+advanced editor exposes it as a plain-language "Require every condition" switch.
 
 ## 3. The 6-step wizard
 
@@ -181,4 +184,5 @@ dark/light. Data comes from the engine's `classify()` (one pass over the folder)
 - Q5 **Keep the raw JSON editor.**
 - Q6 **Do both** (wizard + rules-page overhaul).
 
-**Open:** Q1 `match_mode` any/all — recommendation: add it, default `any`.
+**Resolved:** Q1 `match_mode` any/all — added as a per-rule toggle, default `any`
+(both engines + advanced editor). See §2.

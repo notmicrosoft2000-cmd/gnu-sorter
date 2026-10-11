@@ -307,6 +307,8 @@ class Sorter:
                 entry["_enabled"] = False
             if cat.get("match_all"):
                 entry["_match_all"] = True
+            if cat.get("match_mode") == "all":
+                entry["_mode_all"] = True
             if cat.get("match_name_regex"):
                 try:
                     entry["_re"] = re.compile(cat["match_name_regex"], re.IGNORECASE)
@@ -353,11 +355,21 @@ class Sorter:
         for cat in (self._rules if rules is None else rules):
             if cat.get("_enabled") is False:
                 continue
-            matched = bool(cat.get("_match_all"))
-            if not matched and cat.get("_re") and cat["_re"].search(name):
-                matched = True
-            if not matched and any(name.endswith(ext) for ext in cat["_ext"]):
-                matched = True
+            ext_hit = any(name.endswith(ext) for ext in cat["_ext"])
+            re_hit = bool(cat.get("_re")) and cat["_re"].search(name) is not None
+            has_ext = bool(cat["_ext"])
+            has_re = bool(cat.get("_re"))
+            has_all = bool(cat.get("_match_all"))
+            if cat.get("_mode_all"):
+                # "All": every specified matcher must hit (the catch-all flag
+                # counts as always true). A rule with no matchers never matches.
+                matched = has_ext or has_re or has_all
+                if has_ext and not ext_hit:
+                    matched = False
+                if has_re and not re_hit:
+                    matched = False
+            else:
+                matched = has_all or ext_hit or re_hit
             if not matched:
                 continue
             exclude = cat.get("_exclude")
