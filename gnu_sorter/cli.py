@@ -1,4 +1,4 @@
-"""Command-line interface for GNU Sorter."""
+"""Command-line interface for Funnel."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import threading
 from pathlib import Path
 
 from . import __version__
-from .config import Config, DEFAULT_RULES
+from .config import Config, DEFAULT_RULES, safe_category_name
 from .engine import Sorter, expand, fmt
 from . import service
 
@@ -18,7 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="gnu-sorter",
         description="Sort any folder (or a group of folders) automatically.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    p.add_argument("--version", action="version", version=f"GNU Sorter {__version__}")
+    p.add_argument("--version", action="version", version=f"Funnel {__version__}")
 
     mode = p.add_argument_group("modes")
     mode.add_argument("--gui", action="store_true", help="open the graphical interface")
@@ -27,6 +27,10 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--watch", action="store_true", help="watch folders and sort continuously")
     mode.add_argument("--undo", action="store_true", help="reverse the most recent moves")
     mode.add_argument("--dry-run", action="store_true", help="preview only, change nothing")
+    mode.add_argument("--update-check", action="store_true",
+                      help="check for a newer release")
+    mode.add_argument("--update", action="store_true",
+                      help="download and install the newest release")
 
     mode.add_argument("--root", action="append", metavar="PATH",
                       help="limit the action to this folder (repeatable); for rules "
@@ -136,9 +140,13 @@ def _cmd_remove_root(cfg: Config, path: str) -> int:
 def _cmd_add_rule(cfg: Config, ext: str, folder: str | None,
                   root: str | None = None) -> int:
     ext = ext.strip().lower().lstrip(".")
-    folder = (folder or ext).strip()
     if not ext:
         print("!! missing extension", file=sys.stderr)
+        return 1
+    folder = safe_category_name(folder or ext)
+    if folder is None:
+        print("!! invalid destination folder (must be a relative name "
+              "inside the watched folder)", file=sys.stderr)
         return 1
     label, rules, save = _rules_scope(cfg, root)
     for cat in rules:
@@ -201,9 +209,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.list_rules:
         return _cmd_list_rules(cfg, rule_root)
     if args.add_root:
+        rc = 0
         for p in args.add_root:
-            _cmd_add_root(cfg, p)
-        return 0
+            if _cmd_add_root(cfg, p) != 0:
+                rc = 1
+        return rc
     if args.remove_root:
         return _cmd_remove_root(cfg, args.remove_root)
     if args.add_rule:
@@ -235,8 +245,27 @@ def main(argv: list[str] | None = None) -> int:
         service.migrate_from_download_sorter()
         service.install()
         service.enable()
-        print(f"download-sorter retired — GNU Sorter watcher: {service.status()}")
+        print(f"download-sorter retired — Funnel watcher: {service.status()}")
         return 0
+
+    # ---- self-update --------------------------------------------------
+    if args.update_check or args.update:
+        from . import updater
+        if args.update_check:
+            current, latest, needed = updater.check()
+            if latest is None:
+                print("!! could not check for updates (offline or no release "
+                      "yet)", file=sys.stderr)
+                return 1
+            print(f"update available: {current} → {latest}"
+                  if needed else f"you are up to date ({current}).")
+            return 0
+        ok, msg = updater.update(dry_run=False)
+        print(msg)
+        if ok and "active" in service.status():
+            print("hint: the watcher service is running — restart it with "
+                  "'systemctl --user restart gnu-sorter'.")
+        return 0 if ok else 1
 
     sorter = Sorter(cfg)
     dry = args.dry_run or bool(sorter.settings.get("dry_run_default"))
@@ -249,14 +278,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.watch:
         from .watcher import Watcher
-        watcher = Watcher(sorter)
+        watcher = Watcher(sorter, roots=roots)
         try:
             watcher.run(dry_run=dry)
         except KeyboardInterrupt:
             watcher.stop()
         return 0
 
-    if getattr(args, 'tray', False):
+    if args.tray:
         try:
             from .tray import Tray
             from .gui import GNUSorterApp
@@ -286,8 +315,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.sweep:
         stats = sorter.sweep(roots=roots, dry_run=dry)
         verb = "would sort" if dry else "sorted"
-        print(f"\n{verb} {stats['moved']} file(s); {stats['needs_review']} → Needs-review/"
-              f" ({stats['skipped']} skipped) ({'preview' if dry else 'live'})")
+        summary = (f"\n{verb} {stats['moved']} file(s); "
+                   f"{stats['needs_review']} → Needs-review/ "
+                   f"({stats['skipped']} skipped")
+        if stats.get("failed"):
+            summary += f", {stats['failed']} failed"
+        summary += f") ({'preview' if dry else 'live'})"
+        print(summary)
         return 0
 
     # ---- default: GUI --------------------------------------------------

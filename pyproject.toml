@@ -1,6 +1,6 @@
 [project]
 name = "gnu-sorter"
-version = "2.0.0"
+version = "2.5.0"
 description = "GTK4/libadwaita app that sorts any folder(s) with user-defined rules."
 readme = "README.md"
 requires-python = ">=3.11"

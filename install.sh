@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# GNU Sorter v2.0 — user-local installer
+# Funnel v2.0 — user-local installer
 # - Installs app to ~/.local/share/gnu-sorter/app/
 # - Symlinks ~/.local/bin/gnu-sorter -> app/main.py
 # - Installs desktop entry, icons (SVG + PNGs), KDE service menu
@@ -41,7 +41,7 @@ echo "[install] Desktop entry"
 cat > "$DESK_DIR/gnu-sorter.desktop" << 'DESK'
 [Desktop Entry]
 Type=Application
-Name=GNU Sorter
+Name=Funnel
 Comment=Automatically sort files into category folders
 Exec=gnu-sorter --gui
 Icon=gnu-sorter
@@ -73,7 +73,7 @@ cp "$APP_DIR/data/kio-servicemenu/gnu-sorter-sort.desktop" "$KIO_DIR/gnu-sorter-
 echo "[install] Systemd user unit"
 cat > "$SYSTEMD_USER/gnu-sorter.service" << 'UNIT'
 [Unit]
-Description=GNU Sorter background watcher
+Description=Funnel background watcher
 After=default.target
 
 [Service]
@@ -97,7 +97,7 @@ echo "[install] Initialising defaults (idempotent)"
 "$BIN_DIR/gnu-sorter" --list-roots >/dev/null 2>&1 || true
 
 echo ""
-echo "✓ GNU Sorter installed for $(whoami)"
+echo "✓ Funnel installed for $(whoami)"
 echo "  • App: $APP_DIR"
 echo "  • CLI: $BIN_DIR/gnu-sorter"
 echo "  • Launcher: $DESK_DIR/gnu-sorter.desktop"

@@ -7,6 +7,6 @@ Icon=gnu-sorter
 X-KDE-Priority=TopLevel
 
 [Desktop Action sortHere]
-Name=Sort with GNU Sorter
+Name=Sort with Funnel
 Icon=gnu-sorter
 Exec=gnu-sorter --sweep --root %f

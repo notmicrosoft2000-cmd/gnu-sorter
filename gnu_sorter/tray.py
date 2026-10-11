@@ -1,4 +1,4 @@
-"""System tray integration for GNU Sorter (Windows/Linux)."""
+"""System tray integration for Funnel (Windows/Linux)."""
 from __future__ import annotations
 
 import threading
@@ -60,7 +60,7 @@ class Tray:
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit", lambda: self._call_quit()),
         )
-        self._icon = pystray.Icon("gnu-sorter", self._load_image(), "GNU Sorter", menu)
+        self._icon = pystray.Icon("gnu-sorter", self._load_image(), "Funnel", menu)
         self._thread = threading.Thread(target=self._icon.run, daemon=True)
         self._thread.start()
 

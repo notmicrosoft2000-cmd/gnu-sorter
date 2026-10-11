@@ -2,7 +2,12 @@
   {
     "name": "Photos/Screenshots",
     "extensions": [],
-    "match_name_regex": "screenshot|ibis|scree.?shot|capture"
+    "match_name_regex": "(screenshot|ibis|scree.?shot|capture).*\\.(jpg|jpeg|png|gif|webp|heic|bmp|tiff|avif|dng|svg)$"
+  },
+  {
+    "name": "Wallpapers",
+    "extensions": [],
+    "match_name_regex": "wallpaper|white.?sur"
   },
   {
     "name": "Photos",
@@ -166,10 +171,5 @@
     "extensions": [
       "torrent"
     ]
-  },
-  {
-    "name": "Wallpapers",
-    "extensions": [],
-    "match_name_regex": "wallpaper|white.?sur"
   }
 ]

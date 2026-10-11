@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GNU Sorter entry point — works even when invoked through a symlink."""
+"""Funnel entry point — works even when invoked through a symlink."""
 
 import os
 import sys

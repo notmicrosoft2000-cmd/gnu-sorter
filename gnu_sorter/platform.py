@@ -1,4 +1,4 @@
-"""Platform abstraction for GNU Sorter (Linux/Windows/macOS)."""
+"""Platform abstraction for Funnel (Linux/Windows/macOS)."""
 from __future__ import annotations
 
 import os

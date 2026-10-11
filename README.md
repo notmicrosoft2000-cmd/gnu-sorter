@@ -1,5 +1,5 @@
-<p align="center"><img src="docs/icon.png" width="128" alt="GNU Sorter logo"></p>
-<h1 align="center">GNU Sorter v2.0</h1>
+<p align="center"><img src="docs/icon.png" width="128" alt="Funnel logo"></p>
+<h1 align="center">Funnel v2.0</h1>
 <p align="center">Automatically sort any folder(s) with per-folder custom rules. GTK4 + libadwaita for Linux.</p>
 
 ## Highlights
@@ -8,7 +8,7 @@
 - **Split-view editor** — see folders on the left, their rules on the right.
 - **Step-by-step wizard + Advanced editor** — simple guided flow or compact power-user form.
 - **Quick presets** — GNOME defaults · Photography · Code projects · Empty.
-- **KDE/Dolphin service menu** — right-click "Sort with GNU Sorter" in Dolphin.
+- **KDE/Dolphin service menu** — right-click "Sort with Funnel" in Dolphin.
 - **Safe & reversible** — skips in-progress files, stability window, collision-safe, journaled `--undo`.
 - **CLI + background watcher** — `--sweep`, `--watch`, per-folder rules via `--root`.
 - **User-local install** — `./install.sh` (no sudo). `./uninstall.sh` (optionally `--purge`).
@@ -39,6 +39,20 @@ Add `--service` to enable background watching on login:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash -s -- --service
 ```
+
+## Updating
+
+The app updates itself from GitHub Releases:
+
+```bash
+gnu-sorter --update-check   # what's available?
+gnu-sorter --update         # download + install the newest release
+```
+
+- The **GUI** checks for updates a few seconds after launch and installs them
+  automatically; there is also a *Check for updates…* item in the window menu.
+- If the watcher service is running, `gnu-sorter --update` prints the
+  `systemctl --user restart gnu-sorter` command to apply it.
 
 Or install by hand:
 

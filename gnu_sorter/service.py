@@ -1,4 +1,4 @@
-"""Management + control of the GNU Sorter background service."""
+"""Management + control of the Funnel background service."""
 
 from __future__ import annotations
 
@@ -8,18 +8,13 @@ from pathlib import Path
 
 from . import platform
 
-if platform.is_linux() and platform.systemd_available():
-    UNIT_NAME = "gnu-sorter.service"
-    UNIT_DIR = Path.home() / ".config" / "systemd" / "user"
-    OLD_UNIT = "download-sorter.service"
-else:
-    UNIT_NAME = "gnu-sorter.service"
-    UNIT_DIR = Path.home() / ".config" / "systemd" / "user"
-    OLD_UNIT = "download-sorter.service"
+UNIT_NAME = "gnu-sorter.service"
+UNIT_DIR = Path.home() / ".config" / "systemd" / "user"
+OLD_UNIT = "download-sorter.service"
 
 UNIT_TEMPLATE = """\
 [Unit]
-Description=GNU Sorter (background folder watcher)
+Description=Funnel (background folder watcher)
 After=graphical-session.target
 
 [Service]

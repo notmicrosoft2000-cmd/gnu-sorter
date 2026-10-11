@@ -1,0 +1,28 @@
+name: CI (Linux)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Byte-compile
+        run: python -m compileall -q gnu_sorter main.py
+
+      - name: Import sanity
+        run: python -c "import sys; sys.path.insert(0,'.'); import gnu_sorter.cli, gnu_sorter.updater, gnu_sorter.engine; print('v'+gnu_sorter.__version__)"
+
+      - name: Unit tests
+        run: python -m unittest tests.test_updater

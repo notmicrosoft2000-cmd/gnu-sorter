@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# GNU Sorter v2.0 — user-local uninstaller
+# Funnel v2.0 — user-local uninstaller
 # no --purge: keep config (~/.config/gnu-sorter) and history (~/.local/share/gnu-sorter/history.log)
 # --purge: remove config + history too
 
@@ -43,7 +43,7 @@ if [[ $PURGE -eq 1 ]]; then
 fi
 
 echo ""
-echo "✓ GNU Sorter uninstalled for $(whoami)"
+echo "✓ Funnel uninstalled for $(whoami)"
 if [[ $PURGE -eq 0 ]]; then
   echo "  Config and history kept: ~/.config/gnu-sorter/, ~/.local/share/gnu-sorter/history.log"
   echo "  (use --purge to remove them too)"

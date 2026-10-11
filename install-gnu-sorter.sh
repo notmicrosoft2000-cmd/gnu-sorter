@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GNU Sorter — one-shot installer.
+# Funnel — one-shot installer.
 #
 # Clones the repository and runs install.sh for the current user (no root
 # required). Just download and run this single script:
@@ -26,7 +26,7 @@ fi
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-echo "[setup] Downloading GNU Sorter..."
+echo "[setup] Downloading Funnel..."
 git clone --quiet --depth 1 "$REPO_URL" "$WORK_DIR/gnu-sorter"
 
 echo "[setup] Running install.sh (user-local)..."

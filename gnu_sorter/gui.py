@@ -1,4 +1,4 @@
-"""GTK4 / libadwaita interface for GNU Sorter (v2.0).
+"""GTK4 / libadwaita interface for Funnel (v2.0).
 
 Layout notes:
   * Rules page is a split view: watched folders on the left, that folder's
@@ -24,7 +24,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from . import (APP_ID, APP_NAME, CREATOR, ISSUES, REPO, WEBSITE,  # noqa: E402
                __version__)
-from .config import Config, PRESETS  # noqa: E402
+from .config import Config, PRESETS, safe_category_name  # noqa: E402
 from .engine import Sorter, expand, fmt  # noqa: E402
 from . import service  # noqa: E402
 
@@ -153,7 +153,8 @@ class MainWindow(Adw.ApplicationWindow):
         quick.append("Sort now", "app.sort-now")
         menu.append_section(None, quick)
         tail = Gio.Menu()
-        tail.append("About GNU Sorter", "app.about")
+        tail.append("Check for updates…", "app.update")
+        tail.append("About Funnel", "app.about")
         tail.append("Quit", "app.quit")
         menu.append_section(None, tail)
         header.pack_end(Gtk.MenuButton(menu_model=menu, icon_name="open-menu-symbolic"))
@@ -183,7 +184,7 @@ class MainWindow(Adw.ApplicationWindow):
         # right-click menu (About / Sort now)
         self.ctx_menu = Gio.Menu()
         self.ctx_menu.append("Sort now", "app.sort-now")
-        self.ctx_menu.append("About GNU Sorter", "app.about")
+        self.ctx_menu.append("About Funnel", "app.about")
         click = Gtk.GestureClick.new()
         click.set_button(3)
         click.connect("pressed", self._on_context_press)
@@ -195,15 +196,49 @@ class MainWindow(Adw.ApplicationWindow):
         self.refresh_activity()
         self.refresh_watch_switch()
 
+        # Quietly check for updates a few seconds after launch; only the menu
+        # item produces a status toast.
+        GLib.timeout_add_seconds(3, self._background_update_check)
+
     # ---------------------------------------------------------- window menu --
     def _add_window_actions(self) -> None:
         action = Gio.SimpleAction.new("advanced", None)
         action.connect("activate", lambda *_: self.on_advanced())
         self.add_action(action)
+        action = Gio.SimpleAction.new("update", None)
+        action.connect("activate", self.on_update_clicked)
+        self.add_action(action)
         for i, (label, _rules) in enumerate(PRESETS):
             act = Gio.SimpleAction.new(f"preset-{i}", None)
             act.connect("activate", lambda *_a, idx=i: self.on_preset(idx))
             self.add_action(act)
+
+    # ------------------------------------------------------- self-update --
+    def on_update_clicked(self, *_args) -> None:
+        self.toast("Checking for updates…")
+        threading.Thread(target=lambda: self._update_worker(notify=True),
+                         daemon=True).start()
+
+    def _background_update_check(self) -> bool:
+        """One-shot startup check (silent unless an update is installed)."""
+        threading.Thread(target=lambda: self._update_worker(notify=False),
+                         daemon=True).start()
+        return False
+
+    def _update_worker(self, notify: bool) -> None:
+        try:
+            from . import updater
+            current, latest, needed = updater.check()
+            if not needed:
+                if notify:
+                    GLib.idle_add(self.toast, f"Up to date — version {current}")
+                return
+            GLib.idle_add(self.toast, f"Downloading {latest}…")
+            ok, msg = updater.update(dry_run=False)
+            GLib.idle_add(self.toast, msg)
+        except Exception as exc:
+            if notify:
+                GLib.idle_add(self.toast, f"Update check failed: {exc}")
 
     def _on_context_press(self, _gesture, _n_press, x, y):
         if self._ctx_pop is not None:
@@ -592,12 +627,14 @@ class MainWindow(Adw.ApplicationWindow):
     def _on_rule_search(self, entry):
         text = entry.get_text().strip().lower()
         for lst in (self.rules_list, self.advanced_list):
-            for i in range(1000):
+            i = 0
+            while True:
                 row = lst.get_row_at_index(i)
                 if row is None:
                     break
                 hay = getattr(row, "_haystack", "")
                 row.set_visible(not text or text in hay)
+                i += 1
 
     # -- rule creation ----------------------------------------------------
     def _ensure_custom(self, root: str) -> bool:
@@ -609,8 +646,9 @@ class MainWindow(Adw.ApplicationWindow):
 
     def apply_new_rule(self, root: str, folder: str, extensions: list[str],
                        regex: str | None) -> bool:
-        folder = folder.strip()
+        folder = safe_category_name(folder)
         if not folder:
+            self.toast("Destination folder must be a name inside the watched folder")
             return False
         self._ensure_custom(root)
         rules, _ = self.cfg.rules_for(root)
@@ -727,6 +765,13 @@ class MainWindow(Adw.ApplicationWindow):
         stable.connect("notify::value", self._set_setting, "min_stable_seconds", float)
         behaviour.add(stable)
 
+        check = Adw.SpinRow.new_with_range(0.0, 10.0, 0.5)
+        check.set_title("Stability check interval")
+        check.set_subtitle("Seconds between size checks while a file settles")
+        check.set_value(float(s.get("stability_interval", 0.5)))
+        check.connect("notify::value", self._set_setting, "stability_interval", float)
+        behaviour.add(check)
+
         interval = Adw.SpinRow.new_with_range(1, 60, 1)
         interval.set_title("Poll interval")
         interval.set_subtitle("Seconds between checks when inotify is unavailable")
@@ -804,7 +849,11 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast("Sorting…")
 
         def work():
-            stats = self.sorter.sweep()
+            try:
+                stats = self.sorter.sweep()
+            except Exception as exc:              # never leave the button stuck
+                GLib.idle_add(self._on_sweep_failed, str(exc))
+                return
             GLib.idle_add(self._on_sweep_done, stats)
 
         threading.Thread(target=work, daemon=True).start()
@@ -813,7 +862,16 @@ class MainWindow(Adw.ApplicationWindow):
         self.sort_btn.set_sensitive(True)
         self.refresh_activity()
         verb = "Sorted" if stats["moved"] else "Nothing to sort"
-        self.toast(f"{verb}: {stats['moved']} file(s), {stats['needs_review']} → Needs-review/")
+        message = (f"{verb}: {stats['moved']} file(s), "
+                   f"{stats['needs_review']} → Needs-review/")
+        if stats.get("failed"):
+            message += f", {stats['failed']} failed"
+        self.toast(message)
+        return False
+
+    def _on_sweep_failed(self, message):
+        self.sort_btn.set_sensitive(True)
+        self.toast(f"Sorting failed: {message}")
         return False
 
 
@@ -946,7 +1004,7 @@ class RuleWizard:
         c2.append(Gtk.Label(label="Where should they go?", xalign=0))
         c2.get_last_child().add_css_class("title-3")
         c2.append(_dim("Pick an existing destination or type your own — "
-                       "GNU Sorter creates the folder for you."))
+                       "Funnel creates the folder for you."))
 
         if self.destinations:
             flow = Gtk.FlowBox()
