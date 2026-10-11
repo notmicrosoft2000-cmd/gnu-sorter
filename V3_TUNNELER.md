@@ -119,30 +119,48 @@ Activity tab lists past moves.
 
 ---
 
-## 3. Rule wizard — "powerful, but one simple path" (5 steps)
+## 3. Rule wizard — "powerful, but one simple path" (6 steps)
 
 **Today (v2.x):** 3-page wizard (which files → where → review) + a separate
-Advanced form.
+Advanced form. Most of the engine's filtering power (`enabled`, `match_all`,
+`exclude_name_regex`, size/age bounds, priority) is not exposed in any UI, and
+the Windows engine ignores those keys entirely.
 
-**v3 target — guided 5-step wizard with real content:**
+**v3 target — guided 6-step wizard with real content:**
 
-1. **"What are we tidying today?"** — big icon cards: Images, Video, Music,
-   Documents, Archives, Code, Custom. Mascot greets you.
-2. **"Show me your files"** — Funnel scans the chosen folder, shows a chip
-   cloud of *real files* with icons; tap the ones that belong → extension
-   list inferred. (Power path: "type extensions manually".)
-3. **"Where should they go?"** — destination picker with category icon +
-   auto-suggested name + folder preview.
-4. **Fine-tune (optional, collapsed):** size/age filters, match-all vs any,
-   exclusions, priority, subfolders. Hidden by default.
-5. **Review with live proof:** rule card + real "this will sort N files in
-   this folder" count from a scan; mascot thumbs-up; "Save & add another".
+1. **"What are we tidying?"** — big icon cards (Images, Video, Audio,
+   Documents, Archives, Code, Custom) + "Pick files in this folder" +
+   "Suggest rules for me". Mascot greets; cards pre-fill from recipes.
+2. **"Show me what to catch"** — chip cloud of *real files*; tap to infer
+   extensions with a live "catches N of M" count. Manual path is an
+   extension **dropdown + type-ahead**, never a comma list. Name matching is
+   built from *contains / starts with / ends with / regex* buttons.
+3. **"Where should they go?"** — smart name suggestion **or** **Browse…**
+   to pick with the file manager (path converted to a name inside the root).
+4. **Fine-tune (optional):** size/age filters, exclusions, enabled,
+   **match: any / all**.
+5. **Priority & scope:** position in the first-match-wins order (▲/▼ +
+   conflict warning), this folder's rules vs the shared defaults.
+6. **Review with proof:** rule card + **plain-English sentence** + a **custom
+   animation** (real files flowing into / past the destination) and an exact
+   count; "Save" and "Save & add another".
 - **Recipes gallery:** OBS recordings, phone photos, dev downloads…
   prebuilt starting points.
+- **Rules page overhaul:** view + plain-English + priority, an **"N sorted"**
+  badge from the journal, **edit**, enable toggle, reorder, duplicate, and a
+  **live filename tester**.
+- **Advanced editor:** extensions as chips, folder picker, grouped fields, live
+  English preview, inline validation; keep the raw JSON editor.
+- **Journal:** search (filename/glob + date range) on top of selectors,
+  in-memory **index** (by rule/folder/batch), restore **preview**, and
+  journal **backup / export / import**.
 - Windows: same wizard as a native WinUI stepper.
 
+> Full design + sub-slice plan: [`PHASE3_DESIGN.md`](PHASE3_DESIGN.md).
+
 ### Status
-- Linux + Windows: PENDING (Phase 3).
+- Linux: IN PROGRESS (schema + plain-English + rules page landing first).
+- Windows: PENDING (mirrors Linux after each slice).
 
 ---
 
@@ -170,7 +188,7 @@ Advanced form.
 |------|-------|-------|---------|
 | 1 | Download detection (two-tier hold) | ✅ engine+cli+gui+tests on main | ✅ pushed `0b9f50f`, MSBuild CI validating |
 | 2 | Journal v2 & restore | ✅ done (`tests/test_journal.py`, CLI selectors, rotation, v2 schema) | ✅ engine+Activity (v2 schema, selectors, collision-safe restore, rotation, repair, sweep-undo) |
-| 3 | Rule wizard (5 steps) | ⏳ | ⏳ |
+| 3 | Rule wizard (6 steps) + rules page + journal search | 🔨 in progress ([design](PHASE3_DESIGN.md)) | ⏳ |
 | 4 | Design & mascot | ⏳ | ⏳ |
 
 Every phase lands on `main` incrementally; releases ride on future tags

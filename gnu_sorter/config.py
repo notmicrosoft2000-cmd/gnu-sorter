@@ -14,6 +14,7 @@ import hashlib
 import json
 import ntpath
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -263,6 +264,15 @@ def normalize_rule(rule) -> dict | None:
             val = 0.0
         if val > 0:
             out[key] = int(val) if val.is_integer() else val
+
+    # UI-only presentation metadata (never affects matching). Kept so the rules
+    # page and wizard can show an icon / accent colour per rule.
+    for key in ("icon", "color"):
+        val = rule.get(key)
+        if isinstance(val, str) and val.strip():
+            out[key] = val.strip()
+    if rule.get("match_mode") == "all":
+        out["match_mode"] = "all"
     return out
 
 
@@ -280,6 +290,109 @@ def rule_has_positive(rule: dict) -> bool:
     return bool(rule.get("match_all")
                 or rule.get("extensions")
                 or rule.get("match_name_regex"))
+
+
+# ------------------------------------------------------- plain english -----
+#
+# A tiny, shared describer that turns a rule dict into friendly prose. The
+# wizard's review step, the rules-page subtitle and the advanced-editor preview
+# all use it, so the wording stays consistent everywhere. It is deliberately
+# best-effort: anything it cannot simplify is shown as a regex.
+
+_LITERAL_NAME_RE = re.compile(r"^[A-Za-z0-9 _.\-]+$")
+
+
+def _humanize_token(token: str) -> str | None:
+    """Turn one alternation branch into a friendly phrase, or None if not
+    simple enough to describe in words."""
+    if not token:
+        return None
+    plain = (token.replace("\\-", "-").replace("\\_", "_")
+             .replace("\\.", ".").replace("\\ ", " "))
+    if _LITERAL_NAME_RE.match(plain):
+        return plain.strip(" .-_") or plain
+    return None
+
+
+def humanize_regex(pattern: str) -> str:
+    """Best-effort plain-English description of a name regex."""
+    pattern = (pattern or "").strip()
+    if not pattern:
+        return ""
+    words = [_humanize_token(p) for p in pattern.split("|")]
+    if words and all(w is not None for w in words):
+        if len(words) == 1:
+            return f"the name contains \u201c{words[0]}\u201d"
+        joined = ", ".join(f"\u201c{w}\u201d" for w in words)
+        return f"the name contains one of: {joined}"
+    if _LITERAL_NAME_RE.match(pattern):
+        return f"the name contains \u201c{pattern}\u201d"
+    return f"the name matches /{pattern}/"
+
+
+def _num(val) -> str:
+    try:
+        f = float(val)
+    except (TypeError, ValueError):
+        return str(val)
+    return str(int(f)) if f.is_integer() else str(f)
+
+
+def _rule_match_clauses(rule: dict) -> list[str]:
+    clauses: list[str] = []
+    exts = [str(e).lstrip(".") for e in rule.get("extensions", [])]
+    if exts:
+        shown = ", ".join("." + e for e in exts[:6])
+        if len(exts) > 6:
+            shown += f", and {len(exts) - 6} more"
+        clauses.append(f"a file ending in {shown}")
+    if rule.get("match_name_regex"):
+        clauses.append(humanize_regex(rule["match_name_regex"]))
+    if rule.get("match_all"):
+        clauses.append("any file")
+    return [c for c in clauses if c]
+
+
+def _rule_filter_clauses(rule: dict) -> list[str]:
+    out: list[str] = []
+    if rule.get("exclude_name_regex"):
+        out.append("skipping names matching /%s/" % rule["exclude_name_regex"])
+    lo = rule.get("min_size_mb") or 0
+    hi = rule.get("max_size_mb") or 0
+    if lo and hi:
+        out.append(f"between {_num(lo)} and {_num(hi)} MB")
+    elif lo:
+        out.append(f"at least {_num(lo)} MB")
+    elif hi:
+        out.append(f"up to {_num(hi)} MB")
+    days = rule.get("modified_within_days") or 0
+    if days:
+        out.append(f"modified in the last {_num(days)} day(s)")
+    return out
+
+
+def describe_rule(rule: dict) -> str:
+    """One friendly sentence describing what a rule catches."""
+    clauses = _rule_match_clauses(rule)
+    joiner = " and " if rule.get("match_mode") == "all" else " or "
+    text = joiner.join(clauses) if len(clauses) > 1 else (clauses[0] if clauses else "")
+    if not text:
+        text = "nothing yet"
+    filters = _rule_filter_clauses(rule)
+    if filters:
+        text = f"{text}, {', '.join(filters)}"
+    return text[:1].upper() + text[1:]
+
+
+def describe_rule_details(rule: dict) -> list[str]:
+    """A short bullet list for editors: what matches, then the filters."""
+    bullets = [c[:1].upper() + c[1:] for c in _rule_match_clauses(rule)]
+    if not bullets:
+        bullets = ["Nothing yet \u2014 add an extension or a name match."]
+    bullets += [f[:1].upper() + f[1:] for f in _rule_filter_clauses(rule)]
+    if rule.get("enabled") is False:
+        bullets.append("Paused \u2014 this rule is currently skipped.")
+    return bullets
 
 
 def move_rule(rules: list[dict], name: str, new_index: int) -> list[dict]:

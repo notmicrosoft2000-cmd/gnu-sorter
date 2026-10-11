@@ -8,6 +8,7 @@ import os
 import pathlib
 import sys
 import tempfile
+import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
@@ -26,6 +27,18 @@ OUT = pathlib.Path(os.environ.get("GS_SMOKE_OUT", "/tmp/opencode/gsui"))
 
 
 def capture(window, name: str) -> None:
+    # Re-present and pump the main context briefly so the toplevel is the
+    # active surface and has produced a frame when we snapshot: on Wayland the
+    # compositor stops handing us frames once the window is idle, and
+    # Gtk.Snapshot then yields no render node.
+    window.present()
+    ctx = GLib.MainContext.default()
+    deadline = time.time() + 0.3
+    while time.time() < deadline:
+        while ctx.pending():
+            ctx.iteration(False)
+        time.sleep(0.01)
+
     w, h = window.get_width(), window.get_height()
     if w <= 1 or h <= 1:
         w, h = 940, 640

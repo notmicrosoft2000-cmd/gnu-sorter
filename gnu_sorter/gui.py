@@ -24,7 +24,9 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from . import (APP_ID, APP_NAME, CREATOR, ISSUES, REPO, WEBSITE,  # noqa: E402
                __version__)
-from .config import Config, PRESETS, safe_category_name  # noqa: E402
+from .config import (Config, PRESETS,  # noqa: E402
+                     describe_rule, duplicate_rule, move_rule,
+                     normalize_rule, safe_category_name)
 from .engine import Sorter, expand, fmt  # noqa: E402
 from . import service  # noqa: E402
 
@@ -117,6 +119,23 @@ def _split_exts(text: str) -> list[str]:
         if t and t not in out:
             out.append(t)
     return out
+
+
+def _unescape_simple(pattern: str | None) -> str:
+    """If `pattern` is exactly an escaped literal (``re.escape(x)``), return x.
+
+    Used to pre-fill the "file name contains" box when editing a rule whose
+    name match was created from plain text rather than a hand-written regex.
+    """
+    if not pattern:
+        return ""
+    candidate = re.sub(r"\\(.)", r"\1", pattern)
+    try:
+        if re.escape(candidate) == pattern:
+            return candidate
+    except re.error:
+        pass
+    return ""
 
 
 # ------------------------------------------------------------- main window ---
@@ -459,17 +478,24 @@ class MainWindow(Adw.ApplicationWindow):
         inherit_box.append(self.rules_inherit)
         right.append(inherit_box)
 
-        self.rules_lists = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-        self.rules_lists.append(Gtk.Label(label="File extensions", xalign=0))
-        self.rules_lists.get_last_child().add_css_class("heading")
+        hint = Gtk.Label(
+            label="First matching rule wins \u2014 reorder with \u25b2 \u25bc.",
+            xalign=0)
+        hint.add_css_class("dim-label")
+        hint.add_css_class("caption")
+        right.append(hint)
+
         self.rules_list = _listbox()
-        self.rules_lists.append(self.rules_list)
-        self.advanced_heading = Gtk.Label(label="Name matching", xalign=0)
-        self.advanced_heading.add_css_class("heading")
-        self.rules_lists.append(self.advanced_heading)
-        self.advanced_list = _listbox()
-        self.rules_lists.append(self.advanced_list)
-        right.append(_scroll(self.rules_lists))
+        right.append(_scroll(self.rules_list))
+
+        tester_box = _listbox()
+        self.rules_tester = Adw.EntryRow(title="Test a file name")
+        self.rules_tester.connect("changed", self._on_tester)
+        tester_box.append(self.rules_tester)
+        self.rules_tester_result = Adw.ActionRow(title="\u2026",
+                                                 subtitle="Type a name to preview")
+        tester_box.append(self.rules_tester_result)
+        right.append(tester_box)
 
         paned.set_end_child(right)
         paned.set_vexpand(True)
@@ -537,8 +563,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def refresh_rules(self):
         """Fill the right pane for the selected folder."""
-        for lst in (self.rules_list, self.advanced_list):
-            lst.remove_all()
+        self.rules_list.remove_all()
         root = self.current_root
         self._loading = True
         try:
@@ -557,40 +582,142 @@ class MainWindow(Adw.ApplicationWindow):
 
         template = {json.dumps(c, sort_keys=True)
                     for c in self.cfg.load_rules()}
-        simple = [c for c in rules if not c.get("match_name_regex")]
-        advanced = [c for c in rules if c.get("match_name_regex")]
-        for cat in simple:
-            self.rules_list.append(self._rule_row(cat, template))
-        if not simple:
+        try:
+            counts = self.sorter.rule_counts()
+        except OSError:
+            counts = {}
+        total = len(rules)
+        for i, cat in enumerate(rules):
+            self.rules_list.append(self._rule_row(
+                cat, template, i, total, counts.get(cat.get("name", ""), 0)))
+        if not rules:
             self.rules_list.append(
                 Adw.ActionRow(title="No rules yet",
-                              subtitle="Use “Add Rule” to create one"))
-        for cat in advanced:
-            self.advanced_list.append(self._rule_row(cat, template))
-        self.advanced_heading.set_visible(bool(advanced))
-        self.advanced_list.set_visible(bool(advanced))
+                              subtitle="Use \u201cAdd Rule\u201d to create one"))
         self._on_rule_search(self.rules_search)
 
-    def _rule_row(self, cat: dict, template: set) -> Adw.ActionRow:
+    def _rule_row(self, cat: dict, template: set, index: int,
+                  total: int, count: int = 0) -> Adw.ActionRow:
         name = cat.get("name", "?")
-        regex = cat.get("match_name_regex")
-        exts = [str(e).lstrip(".") for e in cat.get("extensions", [])]
-        if regex:
-            subtitle = f"name matches /{regex}/"
-        else:
-            subtitle = _ext_summary(exts)
-        row = Adw.ActionRow(title=f"{name}/", subtitle=subtitle)
-        row.set_subtitle_lines(1)
-        row._haystack = (name + " " + " ".join(exts) + " " + (regex or "")).lower()
+        row = Adw.ActionRow(title=f"{name}/")
+        parts = [describe_rule(cat)]
+        if count:
+            parts.append(f"{count} sorted")
+        if cat.get("enabled") is False:
+            parts.append("paused")
+        row.set_subtitle("  \u00b7  ".join(parts))
+        row.set_subtitle_lines(2)
+        row._haystack = (name + " " + describe_rule(cat) + " "
+                         + " ".join(str(e) for e in cat.get("extensions", []))
+                         + " " + (cat.get("match_name_regex") or "")).lower()
+
+        num = Gtk.Label(label=str(index + 1))
+        num.add_css_class("dim-label")
+        num.add_css_class("caption")
+        num.set_size_request(16, -1)
+        num.set_valign(Gtk.Align.CENTER)
+        row.add_prefix(num)
+
+        switch = Gtk.Switch(active=cat.get("enabled") is not False,
+                            valign=Gtk.Align.CENTER)
+        switch.set_tooltip_text("Include this rule")
+        switch.connect("notify::active", self._on_rule_enabled, cat)
+        row.add_prefix(switch)
+
         if json.dumps(cat, sort_keys=True) not in template:
             badge = Gtk.Label(label="custom")
             badge.add_css_class("caption")
             badge.add_css_class("success")
             badge.set_valign(Gtk.Align.CENTER)
             row.add_suffix(badge)
-        row.add_suffix(_icon_button("user-trash-symbolic", "Remove rule",
-                                    self._delete_rule, cat))
+
+        up = _icon_button("go-up-symbolic", "Move up", self._move_rule, cat, -1)
+        down = _icon_button("go-down-symbolic", "Move down",
+                            self._move_rule, cat, +1)
+        up.set_sensitive(index > 0)
+        down.set_sensitive(index < total - 1)
+        row.add_suffix(up)
+        row.add_suffix(down)
+        row.add_suffix(self._rule_menu(cat))
         return row
+
+    def _rule_menu(self, cat: dict) -> Gtk.MenuButton:
+        menu = Gtk.MenuButton(icon_name="view-more-symbolic")
+        menu.add_css_class("flat")
+        menu.set_valign(Gtk.Align.CENTER)
+        pop = Gtk.Popover()
+        pbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        for setter in (pbox.set_margin_top, pbox.set_margin_bottom,
+                       pbox.set_margin_start, pbox.set_margin_end):
+            setter(6)
+        for label, callback in (("Edit\u2026", self._edit_rule),
+                                ("Duplicate", self._duplicate_rule),
+                                ("Remove", self._delete_rule)):
+            btn = Gtk.Button(label=label)
+            btn.add_css_class("flat")
+            btn.set_halign(Gtk.Align.FILL)
+            btn.connect("clicked", self._pop_action, pop, callback, cat)
+            pbox.append(btn)
+        pop.set_child(pbox)
+        menu.set_popover(pop)
+        return menu
+
+    def _pop_action(self, _btn, pop, callback, cat):
+        pop.popdown()
+        callback(_btn, cat)
+
+    def _on_rule_enabled(self, switch, _param, cat: dict):
+        if self._loading or not self.current_root:
+            return
+        root = self.current_root
+        self._ensure_custom(root)
+        rules, _ = self.cfg.rules_for(root)
+        for c in rules:
+            if c.get("name") == cat.get("name"):
+                if switch.get_active():
+                    c.pop("enabled", None)
+                else:
+                    c["enabled"] = False
+                break
+        else:
+            return
+        self._save_rules(root, rules)
+
+    def _move_rule(self, _btn, cat: dict, delta: int):
+        if not self.current_root:
+            return
+        root = self.current_root
+        self._ensure_custom(root)
+        rules, _ = self.cfg.rules_for(root)
+        name = cat.get("name")
+        idx = next((i for i, c in enumerate(rules)
+                    if c.get("name") == name), None)
+        if idx is None:
+            return
+        target = max(0, min(idx + delta, len(rules) - 1))
+        self._save_rules(root, move_rule(rules, name, target))
+
+    def _edit_rule(self, _btn, cat: dict):
+        if not self.current_root:
+            return
+        AdvancedDialog(self, self.current_root, rule=cat).open()
+
+    def _duplicate_rule(self, _btn, cat: dict):
+        if not self.current_root:
+            return
+        root = self.current_root
+        self._ensure_custom(root)
+        rules, _ = self.cfg.rules_for(root)
+        self._save_rules(root, duplicate_rule(rules, cat.get("name")),
+                         toast=f"Duplicated {cat.get('name')}/")
+
+    def _save_rules(self, root, rules, toast: str | None = None):
+        self.cfg.save_rules_for(root, rules)
+        self.sorter.reload()
+        self.refresh_rules_folders()
+        self.refresh_folders()
+        if toast:
+            self.toast(toast)
 
     def _delete_rule(self, _btn, cat: dict):
         root = self.current_root
@@ -602,11 +729,8 @@ class MainWindow(Adw.ApplicationWindow):
         if len(kept) == len(rules):
             self.toast("Rule not found")
             return
-        self.cfg.save_rules_for(root, kept)
-        self.sorter.reload()
-        self.refresh_rules()
-        self.refresh_folders()
-        self.toast(f"Removed {cat.get('name')}/ from this folder")
+        self._save_rules(root, kept,
+                         toast=f"Removed {cat.get('name')}/ from this folder")
 
     def _on_inherit(self, row, _param):
         if self._loading or not self.current_root:
@@ -624,15 +748,35 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _on_rule_search(self, entry):
         text = entry.get_text().strip().lower()
-        for lst in (self.rules_list, self.advanced_list):
-            i = 0
-            while True:
-                row = lst.get_row_at_index(i)
-                if row is None:
-                    break
-                hay = getattr(row, "_haystack", "")
-                row.set_visible(not text or text in hay)
-                i += 1
+        i = 0
+        while True:
+            row = self.rules_list.get_row_at_index(i)
+            if row is None:
+                break
+            hay = getattr(row, "_haystack", "")
+            row.set_visible(not text or text in hay)
+            i += 1
+
+    def _on_tester(self, entry):
+        if not self.current_root:
+            return
+        name = entry.get_text().strip()
+        if not name:
+            self.rules_tester_result.set_title("\u2026")
+            self.rules_tester_result.set_subtitle("Type a name to preview")
+            return
+        rules, _ = self.cfg.rules_for(self.current_root)
+        dest = self.sorter.classify([name], rules=rules)[name]
+        if dest == "Needs-review":
+            self.rules_tester_result.set_title(f"{name} \u2192 Needs-review")
+            self.rules_tester_result.set_subtitle(
+                "No enabled rule matches \u2014 it stays put")
+            return
+        idx = next((i for i, c in enumerate(rules)
+                    if c.get("name") == dest), None)
+        pos = f" (rule #{idx + 1})" if idx is not None else ""
+        self.rules_tester_result.set_title(f"{name} \u2192 {dest}/")
+        self.rules_tester_result.set_subtitle(f"Matched by {dest}{pos}")
 
     # -- rule creation ----------------------------------------------------
     def _ensure_custom(self, root: str) -> bool:
@@ -642,35 +786,55 @@ class MainWindow(Adw.ApplicationWindow):
             return True
         return False
 
+    def save_rule(self, root: str, rule: dict, old_name: str | None = None,
+                  merge: bool = False) -> bool:
+        """Add or replace one rule (advanced editor + wizard).
+
+        With ``merge`` and no ``old_name`` an existing rule of the same name
+        gains the new extensions / name match instead of being replaced.
+        """
+        rule = normalize_rule(rule)
+        if rule is None:
+            self.toast("Give the rule a destination folder name")
+            return False
+        self._ensure_custom(root)
+        rules, _ = self.cfg.rules_for(root)
+        if merge and old_name is None:
+            for cat in rules:
+                if cat.get("name") == rule["name"]:
+                    have = [str(e).lstrip(".")
+                            for e in cat.get("extensions", [])]
+                    for e in rule.get("extensions", []):
+                        if e not in have:
+                            cat.setdefault("extensions", []).append(e)
+                    if (rule.get("match_name_regex")
+                            and not cat.get("match_name_regex")):
+                        cat["match_name_regex"] = rule["match_name_regex"]
+                    break
+            else:
+                rules.append(rule)
+        else:
+            target = old_name or rule["name"]
+            for i, cat in enumerate(rules):
+                if cat.get("name") == target:
+                    rules[i] = rule
+                    break
+            else:
+                rules.append(rule)
+        self._save_rules(root, rules,
+                         toast=f"Saved {rule['name']}/ to this folder")
+        return True
+
     def apply_new_rule(self, root: str, folder: str, extensions: list[str],
                        regex: str | None) -> bool:
         folder = safe_category_name(folder)
         if not folder:
             self.toast("Destination folder must be a name inside the watched folder")
             return False
-        self._ensure_custom(root)
-        rules, _ = self.cfg.rules_for(root)
-        for cat in rules:
-            if cat.get("name") == folder:
-                if extensions:
-                    have = [str(e).lstrip(".") for e in cat.get("extensions", [])]
-                    for e in extensions:
-                        if e not in have:
-                            cat.setdefault("extensions", []).append(e)
-                if regex and not cat.get("match_name_regex"):
-                    cat["match_name_regex"] = regex
-                break
-        else:
-            cat = {"name": folder, "extensions": list(extensions)}
-            if regex:
-                cat["match_name_regex"] = regex
-            rules.append(cat)
-        self.cfg.save_rules_for(root, rules)
-        self.sorter.reload()
-        self.refresh_rules_folders()
-        self.refresh_folders()
-        self.toast(f"Added → {folder}/  (this folder only)")
-        return True
+        new = {"name": folder, "extensions": list(extensions)}
+        if regex:
+            new["match_name_regex"] = regex
+        return self.save_rule(root, new, merge=True)
 
     def on_add_rule(self, _btn):
         if not self.current_root:
@@ -1140,74 +1304,242 @@ class RuleWizard:
 class AdvancedDialog:
     """Power-user form: everything in one place, applied to one folder."""
 
-    def __init__(self, window: MainWindow, root: str):
+    def __init__(self, window: MainWindow, root: str, rule: dict | None = None):
         self.win = window
         self.cfg = window.cfg
         self.root = root
+        self.original = dict(rule or {})
+        self.old_name = self.original.get("name")
+        self.exts = [str(e).lstrip(".")
+                     for e in self.original.get("extensions", [])]
 
-        self.dialog = Adw.Dialog(title="Advanced rule")
-        self.dialog.set_content_width(580)
-        self.dialog.set_content_height(640)
+        self.dialog = Adw.Dialog(
+            title="Edit rule" if self.old_name else "Advanced rule")
+        self.dialog.set_content_width(600)
+        self.dialog.set_content_height(680)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-        box.set_margin_top(18)
-        box.set_margin_bottom(14)
-        box.set_margin_start(18)
-        box.set_margin_end(18)
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for setter in (box.set_margin_top, box.set_margin_start, box.set_margin_end):
+            setter(18)
+        box.set_margin_bottom(8)
 
-        form = _listbox()
+        # --- where ---------------------------------------------------
+        box.append(self._section("Where should they go?"))
+        where = _listbox()
         self.folder_row = Adw.EntryRow(title="Destination folder")
-        self.ext_row = Adw.EntryRow(title="Extensions (comma separated)")
-        self.contains_row = Adw.EntryRow(title="File name contains (optional)")
-        self.regex_row = Adw.EntryRow(title="File name matches regex (optional)")
-        for row in (self.folder_row, self.ext_row, self.contains_row, self.regex_row):
-            form.append(row)
-        box.append(form)
-        box.append(_dim("Power-user form — every field applies to this folder "
-                        "only, never to the shared defaults."))
+        self.folder_row.set_text(str(self.original.get("name", "")))
+        self.folder_row.connect("changed", self._preview)
+        browse = Gtk.Button(icon_name="folder-open-symbolic")
+        browse.add_css_class("flat")
+        browse.set_tooltip_text("Pick a folder\u2026")
+        browse.set_valign(Gtk.Align.CENTER)
+        browse.connect("clicked", self._browse)
+        self.folder_row.add_suffix(browse)
+        where.append(self.folder_row)
+        box.append(where)
 
-        box.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        # --- match ---------------------------------------------------
+        box.append(self._section("What should it catch?"))
+        match = _listbox()
+        self.ext_entry = Adw.EntryRow(title="Add an extension, then press Enter")
+        self.ext_entry.connect("entry-activated", self._add_ext)
+        self.ext_entry.connect("changed", self._ext_typed)
+        match.append(self.ext_entry)
+        literal = _unescape_simple(self.original.get("match_name_regex"))
+        self.contains_row = Adw.EntryRow(title="File name contains (optional)")
+        self.contains_row.set_text(literal)
+        self.contains_row.connect("changed", self._preview)
+        self.regex_row = Adw.EntryRow(title="\u2026or matches regex (optional)")
+        self.regex_row.set_text(
+            "" if literal else self.original.get("match_name_regex", ""))
+        self.regex_row.connect("changed", self._preview)
+        self.exclude_row = Adw.EntryRow(
+            title="Skip if name matches regex (optional)")
+        self.exclude_row.set_text(self.original.get("exclude_name_regex", ""))
+        self.exclude_row.connect("changed", self._preview)
+        match.append(self.contains_row)
+        match.append(self.regex_row)
+        match.append(self.exclude_row)
+        box.append(match)
+
+        self.ext_chips = Gtk.FlowBox()
+        self.ext_chips.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.ext_chips.set_max_children_per_line(14)
+        self.ext_chips.set_row_spacing(6)
+        self.ext_chips.set_column_spacing(6)
+        box.append(self.ext_chips)
+
+        # --- refine --------------------------------------------------
+        box.append(self._section("Fine-tune (optional)"))
+        refine = _listbox()
+        self.min_row = Adw.EntryRow(title="Minimum size in MB")
+        self.max_row = Adw.EntryRow(title="Maximum size in MB")
+        self.days_row = Adw.EntryRow(title="Only files modified in the last N days")
+        self.enabled_row = Adw.SwitchRow(title="Enabled")
+        self.enabled_row.set_subtitle("Paused rules are skipped")
+        self.enabled_row.set_active(self.original.get("enabled") is not False)
+        for row, key in ((self.min_row, "min_size_mb"),
+                         (self.max_row, "max_size_mb"),
+                         (self.days_row, "modified_within_days")):
+            value = self.original.get(key)
+            if value:
+                row.set_text(str(value))
+            row.connect("changed", self._preview)
+            refine.append(row)
+        refine.append(self.enabled_row)
+        box.append(refine)
+
+        self.preview = Gtk.Label(xalign=0, wrap=True)
+        self.preview.add_css_class("dim-label")
+        box.append(self.preview)
+
+        outer.append(_scroll(box))
+        outer.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         footer = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        for setter in (footer.set_margin_top, footer.set_margin_bottom,
+                       footer.set_margin_start, footer.set_margin_end):
+            setter(14)
         cancel = Gtk.Button(label="Cancel")
         cancel.connect("clicked", lambda _b: self.dialog.close())
-        add = Gtk.Button(label="Add rule")
-        add.add_css_class("suggested-action")
-        add.connect("clicked", self._apply)
+        save = Gtk.Button(label="Save rule" if self.old_name else "Add rule")
+        save.add_css_class("suggested-action")
+        save.connect("clicked", self._apply)
         footer.append(cancel)
         spacer = Gtk.Box()
         spacer.set_hexpand(True)
         footer.append(spacer)
-        footer.append(add)
-        box.append(footer)
+        footer.append(save)
+        outer.append(footer)
 
-        self.dialog.set_child(box)
+        self.dialog.set_child(outer)
+        self._rebuild_chips()
+        self._preview()
+
+    # -- helpers ------------------------------------------------------
+    @staticmethod
+    def _section(text: str) -> Gtk.Label:
+        lbl = Gtk.Label(label=text, xalign=0)
+        lbl.add_css_class("heading")
+        return lbl
 
     def open(self):
         self.dialog.present(self.win)
 
-    def _apply(self, _btn):
-        folder = self.folder_row.get_text().strip()
-        exts = _split_exts(self.ext_row.get_text())
-        contains = self.contains_row.get_text().strip()
-        raw_regex = self.regex_row.get_text().strip()
+    def _rebuild_chips(self):
+        while (child := self.ext_chips.get_first_child()) is not None:
+            self.ext_chips.remove(child)
+        for ext in self.exts:
+            chip = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+            chip.add_css_class("pill")
+            chip.add_css_class("card")
+            chip.append(Gtk.Label(label=f".{ext}"))
+            remove = Gtk.Button(icon_name="window-close-symbolic")
+            remove.add_css_class("flat")
+            remove.add_css_class("circular")
+            remove.set_tooltip_text(f"Remove .{ext}")
+            remove.connect("clicked", self._remove_ext, ext)
+            chip.append(remove)
+            self.ext_chips.append(chip)
 
-        if not folder:
-            self.win.toast("Destination folder is required")
+    def _add_ext(self, _entry):
+        for ext in _split_exts(self.ext_entry.get_text()):
+            if ext not in self.exts:
+                self.exts.append(ext)
+        self.ext_entry.set_text("")
+        self._rebuild_chips()
+        self._preview()
+
+    def _ext_typed(self, entry):
+        # Commit on a comma/space so typing "jpg, png" still works, but typing
+        # a single extension only becomes a chip on Enter.
+        text = entry.get_text()
+        if any(ch in text for ch in ", \t"):
+            for ext in _split_exts(text):
+                if ext not in self.exts:
+                    self.exts.append(ext)
+            entry.set_text("")
+            self._rebuild_chips()
+            self._preview()
+
+    def _remove_ext(self, _btn, ext: str):
+        self.exts = [e for e in self.exts if e != ext]
+        self._rebuild_chips()
+        self._preview()
+
+    def _browse(self, _btn):
+        if not hasattr(Gtk, "FileDialog"):
+            self.win.toast("The folder picker needs a newer GTK")
             return
-        regex = None
-        if raw_regex:
-            try:
-                re.compile(raw_regex)
-            except re.error as exc:
-                self.win.toast(f"Invalid regular expression: {exc}")
-                return
-            regex = raw_regex
-        elif contains:
+        dialog = Gtk.FileDialog()
+        dialog.set_title("Choose a destination folder")
+        dialog.set_initial_folder(Gio.File.new_for_path(str(expand(self.root))))
+        dialog.select_folder(self.win, None, self._browse_done)
+
+    def _browse_done(self, dialog, result):
+        try:
+            gfile = dialog.select_folder_finish(result)
+        except GLib.Error:
+            return
+        if gfile is None:
+            return
+        path = Path(gfile.get_path() or "")
+        try:
+            name = str(path.relative_to(expand(self.root)))
+        except ValueError:
+            name = path.name
+        self.folder_row.set_text(safe_category_name(name) or path.name)
+
+    def _build_rule(self) -> dict:
+        regex = self.regex_row.get_text().strip()
+        contains = self.contains_row.get_text().strip()
+        if not regex and contains:
             regex = re.escape(contains)
-        if not exts and not regex:
-            self.win.toast("Add an extension or a name match")
+        rule: dict = {"name": self.folder_row.get_text().strip(),
+                      "extensions": list(self.exts)}
+        if regex:
+            rule["match_name_regex"] = regex
+        exclude = self.exclude_row.get_text().strip()
+        if exclude:
+            rule["exclude_name_regex"] = exclude
+        for key, row in (("min_size_mb", self.min_row),
+                         ("max_size_mb", self.max_row),
+                         ("modified_within_days", self.days_row)):
+            text = row.get_text().strip()
+            if text:
+                try:
+                    rule[key] = float(text)
+                except ValueError:
+                    pass
+        if not self.enabled_row.get_active():
+            rule["enabled"] = False
+        for key in ("icon", "color", "match_mode"):
+            if self.original.get(key):
+                rule[key] = self.original[key]
+        return rule
+
+    def _preview(self, *_):
+        normalized = normalize_rule(self._build_rule())
+        if normalized is None:
+            self.preview.set_text("Give the rule a destination folder name.")
+        else:
+            self.preview.set_text("Reads as: " + describe_rule(normalized))
+
+    def _apply(self, _btn):
+        for kind, text in (("name", self.regex_row.get_text().strip()),
+                           ("skip", self.exclude_row.get_text().strip())):
+            if not text:
+                continue
+            try:
+                re.compile(text)
+            except re.error as exc:
+                self.win.toast(f"Invalid {kind} regular expression: {exc}")
+                return
+        rule = self._build_rule()
+        if not (rule.get("extensions") or rule.get("match_name_regex")):
+            self.win.toast("Add at least one extension or a name match")
             return
-        if self.win.apply_new_rule(self.root, folder, exts, regex):
+        if self.win.save_rule(self.root, rule, old_name=self.old_name):
             self.dialog.close()
 
 

@@ -376,6 +376,18 @@ class Sorter:
             return cat["name"]
         return "Needs-review"
 
+    def classify(self, filenames: list[str],
+                 rules: list[dict] | None = None) -> dict[str, str]:
+        """Map each file name to the destination it would sort into.
+
+        `rules` may be a raw ruleset (compiled here) or None to use the sorter's
+        current rules. Used by the wizard's live preview / animation and by the
+        rules-page filename tester; it never touches disk.
+        """
+        compiled = self._compile(rules) if rules is not None else self._rules
+        return {name: self.categorize(name, rules=compiled)
+                for name in filenames}
+
     # -- moving ----------------------------------------------------------
     def _destination(self, root: Path, category: str,
                      quiet: bool = False) -> tuple[Path, str]:
@@ -584,6 +596,20 @@ class Sorter:
         return [rec for _line, rec in
                 self._select(self._read_journal(), limit, since, before,
                              folder, rule)]
+
+    def rule_counts(self) -> dict[str, int]:
+        """How many live journal entries each rule name has sorted.
+
+        One pass over the journal; powers the "N sorted" badge on the rules
+        page. The journal only keeps entries that have not been undone, so the
+        count reflects what is currently in place.
+        """
+        counts: dict[str, int] = {}
+        for _line, rec in self._read_journal():
+            rule = rec.get("rule")
+            if rule:
+                counts[rule] = counts.get(rule, 0) + 1
+        return counts
 
     def history(self, limit: int | None = None) -> list[tuple[str, str, str]]:
         return [(r["ts"], r["src"], r["dest"])
