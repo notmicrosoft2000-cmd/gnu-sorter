@@ -171,7 +171,7 @@ dark/light. Data comes from the engine's `classify()` (one pass over the folder)
 1. **Schema + plain-English + classify/counts** — `config.py`, `engine.py`,
    tests. *(Windows parity follows.)* — **DONE**
 2. **Rules page overhaul** (Linux) + refined advanced editor. — **DONE**
-3. **6-step wizard** (Linux) incl. folder picker + custom animation.
+3. **6-step wizard** (Linux) incl. folder picker + custom animation. — **DONE**
 4. **Journal search/index/backup/restore** (CLI + Activity).
 5. **Windows mirror** of 1–4 (native stepper, Fluent icons).
 6. Mark Phase 3 done; Phase 4 art lands on the seams above.

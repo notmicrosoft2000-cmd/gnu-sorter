@@ -12,6 +12,7 @@ Layout notes:
 from __future__ import annotations
 
 import json
+import math
 import re
 import threading
 from pathlib import Path
@@ -20,13 +21,16 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
+gi.require_version("Pango", "1.0")
+gi.require_version("PangoCairo", "1.0")
+from gi.repository import (Adw, Gdk, Gio, GLib, Gtk,  # noqa: E402
+                           Pango, PangoCairo)
 
 from . import (APP_ID, APP_NAME, CREATOR, ISSUES, REPO, WEBSITE,  # noqa: E402
                __version__)
 from .config import (Config, PRESETS,  # noqa: E402
                      describe_rule, duplicate_rule, move_rule,
-                     normalize_rule, safe_category_name)
+                     name_matcher_regex, normalize_rule, safe_category_name)
 from .engine import Sorter, expand, fmt  # noqa: E402
 from . import service  # noqa: E402
 
@@ -1047,39 +1051,303 @@ class MainWindow(Adw.ApplicationWindow):
 
 # ------------------------------------------------------------- wizard -------
 
+# A friendly starting point per kind of file. Each card pre-fills a sensible
+# extension set; everything can still be changed in step 2.
+WIZARD_RECIPES = [
+    ("images", "Images", "Photos, art and pictures",
+     "image-x-generic-symbolic",
+     ["jpg", "jpeg", "png", "gif", "webp", "heic", "bmp", "tiff", "svg", "raw"]),
+    ("video", "Video", "Movies and clips",
+     "video-x-generic-symbolic",
+     ["mp4", "mkv", "mov", "avi", "webm", "wmv", "flv", "m4v", "mpg"]),
+    ("audio", "Audio", "Music and sound",
+     "audio-x-generic-symbolic",
+     ["mp3", "wav", "flac", "ogg", "m4a", "aac", "wma", "opus"]),
+    ("documents", "Documents", "Docs, PDFs and notes",
+     "x-office-document-symbolic",
+     ["pdf", "doc", "docx", "txt", "rtf", "odt", "md", "tex",
+      "xls", "xlsx", "csv", "ppt", "pptx"]),
+    ("archives", "Archives", "Zips and bundles",
+     "package-x-generic-symbolic",
+     ["zip", "tar", "gz", "bz2", "xz", "7z", "rar", "tgz"]),
+    ("code", "Code", "Source and scripts",
+     "text-x-generic-symbolic",
+     ["py", "js", "ts", "java", "c", "cpp", "h", "cs", "go", "rs", "rb",
+      "sh", "ps1", "html", "css", "json", "yaml", "yml", "sql"]),
+]
+
+WIZARD_STEPS = [
+    "What are we tidying?",
+    "Show me what to catch",
+    "Where should they go?",
+    "Fine-tune (optional)",
+    "Priority & scope",
+    "Review with proof",
+]
+
+
+class SortPreview(Gtk.DrawingArea):
+    """A small, self-drawn "files flow into the folder" animation.
+
+    Real file names are drawn on the left; the ones this rule catches travel
+    into the destination folder while the rest stay put and dim. Honours the
+    desktop's "reduce motion" setting by jumping straight to the final frame.
+    """
+
+    def __init__(self, files, matched, folder):
+        super().__init__()
+        self.files = list(files)[:8]
+        self.matched = set(matched)
+        self.folder = folder or "Destination"
+        self.progress = 0.0
+        self._tick_id = 0
+        self._start = None
+        self.set_content_height(170)
+        self.set_hexpand(True)
+        self.set_draw_func(self._draw)
+        self.connect("map", self._on_map)
+        self.connect("unmap", self._on_unmap)
+
+    # -- animation clock --------------------------------------------------
+    @staticmethod
+    def _motion_ok() -> bool:
+        try:
+            return bool(Gtk.Settings.get_default()
+                        .get_property("gtk-enable-animations"))
+        except Exception:
+            return True
+
+    def _on_map(self, *_):
+        if not self._motion_ok() or not self.files:
+            self.progress = 1.0
+            self.queue_draw()
+            return
+        self._start = None
+        if not self._tick_id:
+            self._tick_id = self.add_tick_callback(self._tick)
+
+    def _on_unmap(self, *_):
+        if self._tick_id:
+            self.remove_tick_callback(self._tick_id)
+            self._tick_id = 0
+
+    def _tick(self, _widget, clock):
+        now = clock.get_frame_time() / 1_000_000.0
+        if self._start is None:
+            self._start = now
+        self.progress = min(1.0, (now - self._start) / 1.6)
+        self.queue_draw()
+        if self.progress >= 1.0:
+            self._tick_id = 0
+            return False
+        return True
+
+    # -- painting ---------------------------------------------------------
+    def _draw(self, area, cr, width, height, *_):
+        try:
+            self._paint(area, cr, width, height)
+        except Exception:
+            pass
+
+    def _paint(self, area, cr, width, height):
+        files = self.files or ["(no files yet)"]
+        chip_w, chip_h, gap = 150.0, 24.0, 6.0
+        top = max(6.0, (height - len(files) * (chip_h + gap)) / 2.0)
+        dest_w, dest_h = 138.0, 74.0
+        dest_x = max(170.0, width - dest_w - 14.0)
+        dest_y = (height - dest_h) / 2.0
+
+        self._round_rect(cr, dest_x, dest_y + dest_h * 0.22,
+                         dest_w, dest_h * 0.78, 8.0)
+        cr.set_source_rgba(0.98, 0.79, 0.28, 0.95)
+        cr.fill()
+        self._round_rect(cr, dest_x + 12, dest_y, dest_w * 0.42,
+                         dest_h * 0.34, 5.0)
+        cr.set_source_rgba(0.98, 0.79, 0.28, 0.95)
+        cr.fill()
+        layout = area.create_pango_layout(self.folder)
+        layout.set_width(int(dest_w * Pango.SCALE))
+        layout.set_alignment(Pango.Alignment.CENTER)
+        layout.set_ellipsize(Pango.EllipsizeMode.END)
+        cr.move_to(dest_x, dest_y + dest_h + 4)
+        cr.set_source_rgba(0.5, 0.5, 0.56, 1.0)
+        PangoCairo.show_layout(cr, layout)
+
+        for i, name in enumerate(files):
+            y0 = top + i * (chip_h + gap)
+            hit = name in self.matched
+            p = self.progress if hit else 0.0
+            x = 12.0 + (dest_x + 24.0 - 12.0) * p
+            y = y0 + (dest_y + dest_h / 2.0 - chip_h / 2.0 - y0) * p
+            if not hit:
+                alpha = 0.35
+            elif p > 0.85:
+                alpha = max(0.0, 1.0 - (p - 0.85) / 0.15)
+            else:
+                alpha = 1.0
+            self._chip(area, cr, x, y, chip_w, chip_h, name, alpha)
+
+    def _chip(self, area, cr, x, y, w, h, text, alpha):
+        self._round_rect(cr, x, y, w, h, 6.0)
+        cr.set_source_rgba(0.30, 0.55, 0.95, 0.16 * alpha)
+        cr.fill_preserve()
+        cr.set_line_width(1.2)
+        cr.set_source_rgba(0.30, 0.55, 0.95, 0.85 * alpha)
+        cr.stroke()
+        layout = area.create_pango_layout(text)
+        layout.set_width(int((w - 12) * Pango.SCALE))
+        layout.set_ellipsize(Pango.EllipsizeMode.END)
+        cr.move_to(x + 6, y + 4)
+        cr.set_source_rgba(0.12, 0.14, 0.18, alpha)
+        PangoCairo.show_layout(cr, layout)
+
+    @staticmethod
+    def _round_rect(cr, x, y, w, h, r):
+        r = max(0.0, min(r, w / 2.0, h / 2.0))
+        cr.new_sub_path()
+        cr.arc(x + w - r, y + r, r, -math.pi / 2.0, 0)
+        cr.arc(x + w - r, y + h - r, r, 0, math.pi / 2.0)
+        cr.arc(x + r, y + h - r, r, math.pi / 2.0, math.pi)
+        cr.arc(x + r, y + r, r, math.pi, 3.0 * math.pi / 2.0)
+        cr.close_path()
+
+
 class RuleWizard:
-    """Step-by-step "Add Rule" flow: which files → where → review."""
+    """Six friendly steps, from "what are we tidying" to a proven rule.
+
+    1 what to tidy · 2 what to catch · 3 where it goes · 4 fine-tune ·
+    5 priority & scope · 6 review with proof. The last step shows the rule in
+    plain English and animates the folder's real files sorting (or not).
+    """
 
     def __init__(self, window: MainWindow, root: str):
         self.win = window
         self.cfg = window.cfg
         self.root = root
-        self.state = {"mode": "ext"}
+        self._files = None
         rules, _ = self.cfg.rules_for(root)
-        self.destinations = [c.get("name", "") for c in rules
-                             if c.get("name")][:12]
+        self.existing = [c for c in rules if c.get("name")]
+        self.destinations = [c.get("name", "") for c in self.existing][:12]
+        self._suggest_checks = []
+        self._insert_index = len(self.existing)
+        self.state = {
+            "recipe": None,
+            "exts": [],
+            "name_mode": "none",
+            "name_text": "",
+            "folder": "",
+            "min_mb": None,
+            "max_mb": None,
+            "days": None,
+            "exclude": "",
+            "enabled": True,
+            "match_all": False,
+        }
 
         self.dialog = Adw.Dialog(title="Add a rule")
-        self.dialog.set_content_width(640)
-        self.dialog.set_content_height(600)
+        self.dialog.set_content_width(1100)
+        self.dialog.set_content_height(820)
         self.view = Adw.NavigationView()
         self.dialog.set_child(self.view)
         self._build()
 
     def open(self):
         self.view.push(self.page1)
-        # Let the dialog layout properly before presenting; show a little larger
         self.dialog.present(self.win)
 
+    # -- folder scan ------------------------------------------------------
+    def _scan(self) -> list[str]:
+        if self._files is not None:
+            return self._files
+        files: list[str] = []
+        try:
+            for p in sorted(expand(self.root).iterdir()):
+                if p.is_file() and not p.name.startswith("."):
+                    files.append(p.name)
+        except OSError:
+            pass
+        self._files = files
+        return files
 
-    # -- page construction ------------------------------------------------
-    def _page(self, title: str, content: Gtk.Widget, left, right,
-              can_pop: bool) -> Adw.NavigationPage:
+    def _ext_freq(self) -> dict[str, int]:
+        freq: dict[str, int] = {}
+        for name in self._scan():
+            ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+            if ext:
+                freq[ext] = freq.get(ext, 0) + 1
+        return freq
+
+    def _known_exts(self) -> list[str]:
+        present = set(self._ext_freq())
+        library = {e for _k, _t, _s, _i, exts in WIZARD_RECIPES for e in exts}
+        return sorted(present | library)
+
+    # -- rule building ----------------------------------------------------
+    def _name_pattern(self) -> str | None:
+        return name_matcher_regex(self.state["name_mode"],
+                                  self.state["name_text"])
+
+    def _rule_dict(self) -> dict:
+        s = self.state
+        name = safe_category_name(s["folder"]) or s["folder"]
+        rule: dict = {"name": name}
+        if s["exts"]:
+            rule["extensions"] = list(s["exts"])
+        pattern = self._name_pattern()
+        if pattern:
+            rule["match_name_regex"] = pattern
+        if not s["enabled"]:
+            rule["enabled"] = False
+        if s["exclude"]:
+            rule["exclude_name_regex"] = s["exclude"]
+        if s["min_mb"] is not None:
+            rule["min_size_mb"] = s["min_mb"]
+        if s["max_mb"] is not None:
+            rule["max_size_mb"] = s["max_mb"]
+        if s["days"] is not None:
+            rule["modified_within_days"] = s["days"]
+        if s["match_all"]:
+            rule["match_mode"] = "all"
+        return rule
+
+    def _regex_ok(self) -> bool:
+        if self.state["name_mode"] != "regex":
+            return True
+        pattern = self._name_pattern()
+        if not pattern:
+            return True
+        try:
+            re.compile(pattern)
+            return True
+        except re.error:
+            return False
+
+    @staticmethod
+    def _has_matcher(rule: dict) -> bool:
+        return bool(rule.get("extensions") or rule.get("match_name_regex")
+                    or rule.get("match_all"))
+
+    def _counts(self):
+        """(caught, total) if this folder's files were sorted by this rule."""
+        names = self._scan()
+        if not names:
+            return (0, 0)
+        rule = self._rule_dict()
+        folder = rule.get("name") or "Wizard"
+        rule["name"] = folder
+        try:
+            result = self.win.sorter.classify(names, rules=[rule])
+        except Exception:
+            return (0, len(names))
+        return (sum(1 for n in names if result.get(n) == folder), len(names))
+
+    # -- page scaffolding -------------------------------------------------
+    def _page(self, title, content, left, right, can_pop=True):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.set_vexpand(True)
         clamp = Adw.Clamp()
-        clamp.set_maximum_size(520)
-        clamp.set_tightening_threshold(400)
+        clamp.set_maximum_size(560)
+        clamp.set_tightening_threshold(420)
         clamp.set_child(content)
         box.append(_scroll(clamp))
         box.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
@@ -1101,7 +1369,14 @@ class RuleWizard:
         return page
 
     @staticmethod
-    def _field(label: str, widget: Gtk.Widget) -> Gtk.Box:
+    def _heading(text):
+        lbl = Gtk.Label(label=text, xalign=0)
+        lbl.add_css_class("title-3")
+        lbl.set_wrap(True)
+        return lbl
+
+    @staticmethod
+    def _field(label, widget):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         lbl = Gtk.Label(label=label, xalign=0)
         lbl.add_css_class("heading")
@@ -1110,193 +1385,738 @@ class RuleWizard:
         return box
 
     @staticmethod
-    def _pad(widget: Gtk.Widget) -> Gtk.Widget:
+    def _pad(widget):
         widget.set_margin_top(18)
         widget.set_margin_bottom(18)
         widget.set_margin_start(18)
         widget.set_margin_end(18)
         return widget
 
-    def _build(self) -> None:
-        # ---------------- page 1: which files?
-        c1 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-        self._pad(c1)
-        c1.append(Gtk.Label(label="Which files should this rule catch?",
-                            xalign=0))
-        c1.get_last_child().add_css_class("title-3")
+    @staticmethod
+    def _clear_box(box):
+        child = box.get_first_child()
+        while child is not None:
+            nxt = child.get_next_sibling()
+            box.remove(child)
+            child = nxt
 
-        self.mode_list = _listbox(Gtk.SelectionMode.SINGLE)
-        for mode, title, sub in (
-                ("ext", "File extension", ".jpg, .quant, .pdf, .cbz"),
-                ("name", "File name", "matches text — e.g. “screenshot”")):
-            row = Gtk.ListBoxRow()
-            row._mode = mode
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            box.set_margin_top(8)
-            box.set_margin_bottom(8)
-            box.set_margin_start(10)
-            box.set_margin_end(10)
-            lbl = Gtk.Label(label=title, xalign=0)
-            sub_lbl = Gtk.Label(label=sub, xalign=0)
-            sub_lbl.add_css_class("dim-label")
-            sub_lbl.add_css_class("caption")
-            box.append(lbl)
-            box.append(sub_lbl)
-            row.set_child(box)
-            self.mode_list.append(row)
-        self.mode_list.connect("row-selected", self._on_mode)
-        c1.append(self.mode_list)
+    def _root_name(self):
+        return expand(self.root).name or str(self.root)
 
-        self.entry_stack = Gtk.Stack()
-        self.entry_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-        self.ext_entry = Gtk.Entry(placeholder_text="jpg, png, quant")
-        self.ext_entry.connect("changed", self._on_input)
+    # -- build ------------------------------------------------------------
+    def _build(self):
+        self._build_step1()
+        self._build_step2()
+        self._build_step3()
+        self._build_step4()
+        self._build_step5()
+        self._build_step6()
+        self._build_suggest()
+
+    # ---- step 1: what are we tidying ------------------------------------
+    def _build_step1(self):
+        c = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        self._pad(c)
+        c.append(self._heading(WIZARD_STEPS[0]))
+        c.append(_dim(f"Starting in {self._root_name()}. Pick a starting point — "
+                      "you can change every detail next."))
+
+        flow = Gtk.FlowBox()
+        flow.set_selection_mode(Gtk.SelectionMode.NONE)
+        flow.set_max_children_per_line(3)
+        flow.set_min_children_per_line(2)
+        flow.set_row_spacing(8)
+        flow.set_column_spacing(8)
+        flow.set_homogeneous(True)
+        for key, title, sub, icon, exts in WIZARD_RECIPES:
+            flow.append(self._recipe_card(key, title, sub, icon, exts))
+        flow.append(self._recipe_card("custom", "Custom", "Start from scratch",
+                                      "preferences-other-symbolic", []))
+        c.append(flow)
+
+        magic = _listbox()
+        magic.append(self._magic_row("folder-open-symbolic",
+                                     "Pick files in this folder",
+                                     "Scan this folder and pick what stands out",
+                                     self._magic_pick))
+        magic.append(self._magic_row("starred-symbolic",
+                                     "Suggest rules for me",
+                                     "Learn from the files already here",
+                                     self._magic_suggest))
+        c.append(magic)
+
+        cancel = Gtk.Button(label="Cancel")
+        cancel.connect("clicked", lambda _b: self.dialog.close())
+        self.page1 = self._page("Add a rule", c, [cancel], [], can_pop=False)
+
+    def _recipe_card(self, key, title, sub, icon, exts):
+        btn = Gtk.Button()
+        btn.add_css_class("card")
+        btn.set_size_request(170, 96)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box.set_margin_top(12)
+        box.set_margin_bottom(12)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        img = Gtk.Image.new_from_icon_name(icon)
+        img.set_pixel_size(28)
+        img.add_css_class("dim-label")
+        box.append(img)
+        lbl = Gtk.Label(label=title, xalign=0)
+        lbl.add_css_class("heading")
+        box.append(lbl)
+        box.append(_dim(sub))
+        btn.set_child(box)
+        btn.connect("clicked", lambda _b: self._start_recipe(key, exts))
+        return btn
+
+    @staticmethod
+    def _magic_row(icon, title, subtitle, handler):
+        row = Adw.ActionRow(title=title, subtitle=subtitle)
+        row.add_prefix(Gtk.Image.new_from_icon_name(icon))
+        row.add_suffix(Gtk.Image.new_from_icon_name("go-next-symbolic"))
+        row.set_activatable(True)
+        row.connect("activated", lambda _r: handler())
+        return row
+
+    def _start_recipe(self, key, exts):
+        self.state["recipe"] = key
+        self.state["exts"] = [] if key == "custom" else list(exts)
+        self._enter_step2()
+
+    def _magic_pick(self):
+        self.state["recipe"] = "custom"
+        self.state["exts"] = []
+        self._enter_step2()
+
+    # ---- step 2: what to catch ------------------------------------------
+    def _build_step2(self):
+        c = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        self._pad(c)
+        c.append(self._heading(WIZARD_STEPS[1]))
+        self.count_label = _dim("")
+        c.append(self.count_label)
+
+        add_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        add_lbl = Gtk.Label(label="Add extension")
+        self.ext_drop = Gtk.DropDown.new_from_strings(
+            ["." + e for e in self._known_exts()])
+        self.ext_drop.set_enable_search(True)
+        self.ext_drop.set_hexpand(True)
+        self.ext_drop.connect("notify::selected", self._on_ext_picked)
+        add_box.append(add_lbl)
+        add_box.append(self.ext_drop)
+        c.append(add_box)
+
+        self.chip_flow = Gtk.FlowBox()
+        self.chip_flow.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.chip_flow.set_max_children_per_line(12)
+        self.chip_flow.set_row_spacing(6)
+        self.chip_flow.set_column_spacing(6)
+        c.append(self.chip_flow)
+
+        files_lbl = Gtk.Label(label="Files already here", xalign=0)
+        files_lbl.add_css_class("heading")
+        c.append(files_lbl)
+        c.append(_dim("Tap a file to catch everything with that extension."))
+        self.file_flow = Gtk.FlowBox()
+        self.file_flow.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.file_flow.set_max_children_per_line(2)
+        self.file_flow.set_row_spacing(4)
+        self.file_flow.set_column_spacing(4)
+        c.append(self.file_flow)
+
+        name_lbl = Gtk.Label(label="…or match the file name", xalign=0)
+        name_lbl.add_css_class("heading")
+        c.append(name_lbl)
+        self.name_toggles, self.name_buttons = self._toggle_row(
+            [("contains", "contains"), ("starts", "starts with"),
+             ("ends", "ends with"), ("regex", "regex")])
+        c.append(self.name_toggles)
         self.name_entry = Gtk.Entry(placeholder_text="screenshot")
-        self.name_entry.connect("changed", self._on_input)
-        self.entry_stack.add_named(self.ext_entry, "ext")
-        self.entry_stack.add_named(self.name_entry, "name")
-        c1.append(self._field("Extensions", self.entry_stack))
-        c1.append(_dim("Separate multiple extensions with commas. The folder is "
-                       "created automatically on the first matching file."))
+        self.name_entry.connect("changed", self._on_name_changed)
+        c.append(self.name_entry)
 
-        self.btn_cancel = Gtk.Button(label="Cancel")
-        self.btn_cancel.connect("clicked", lambda _b: self.dialog.close())
-        self.btn_next1 = Gtk.Button(label="Next")
-        self.btn_next1.add_css_class("suggested-action")
-        self.btn_next1.set_sensitive(False)
-        self.btn_next1.connect("clicked", self._go_dest)
-        self.page1 = self._page("Which files?", c1,
-                                [self.btn_cancel], [self.btn_next1], can_pop=False)
+        back = Gtk.Button(label="Back")
+        back.connect("clicked", lambda _b: self.view.pop())
+        nxt = Gtk.Button(label="Next")
+        nxt.add_css_class("suggested-action")
+        nxt.connect("clicked", lambda _b: self._enter_step3())
+        self.page2 = self._page(WIZARD_STEPS[1], c, [back], [nxt])
 
-        # ---------------- page 2: where do they go?
-        c2 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-        self._pad(c2)
-        c2.append(Gtk.Label(label="Where should they go?", xalign=0))
-        c2.get_last_child().add_css_class("title-3")
-        c2.append(_dim("Pick an existing destination or type your own — "
-                       "Funnel creates the folder for you."))
+    def _toggle_row(self, options):
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        box.add_css_class("linked")
+        buttons = {}
+        for key, label in options:
+            btn = Gtk.ToggleButton(label=label)
+            btn.connect("toggled", self._on_name_toggle, key)
+            buttons[key] = btn
+            box.append(btn)
+        return box, buttons
+
+    def _on_name_toggle(self, btn, key):
+        if btn.get_active():
+            self.state["name_mode"] = key
+            for other_key, other in self.name_buttons.items():
+                if other_key != key and other.get_active():
+                    other.set_active(False)
+        elif self.state["name_mode"] == key:
+            self.state["name_mode"] = "none"
+        self._refresh_count()
+
+    def _on_name_changed(self, entry):
+        self.state["name_text"] = entry.get_text()
+        self._refresh_count()
+
+    def _on_ext_picked(self, drop, _param):
+        idx = drop.get_selected()
+        items = self._known_exts()
+        if idx == Gtk.INVALID_LIST_POSITION or not (0 <= idx < len(items)):
+            return
+        ext = items[idx]
+        if ext not in self.state["exts"]:
+            self.state["exts"].append(ext)
+            GLib.idle_add(self._refresh_step2)
+
+    def _on_file_toggled(self, btn, ext):
+        if not ext:
+            return
+        if btn.get_active() and ext not in self.state["exts"]:
+            self.state["exts"].append(ext)
+        elif not btn.get_active() and ext in self.state["exts"]:
+            self.state["exts"].remove(ext)
+        GLib.idle_add(self._refresh_step2)
+
+    def _remove_ext(self, _btn, ext):
+        if ext in self.state["exts"]:
+            self.state["exts"].remove(ext)
+        GLib.idle_add(self._refresh_step2)
+
+    def _enter_step2(self):
+        self._refresh_step2()
+        self.view.push(self.page2)
+
+    def _refresh_step2(self):
+        self._rebuild_chips()
+        self._refresh_files()
+        self._refresh_count()
+        return False
+
+    def _rebuild_chips(self):
+        self._clear_box(self.chip_flow)
+        if not self.state["exts"]:
+            self.chip_flow.append(_dim("No extensions yet — add some above."))
+            return
+        for ext in self.state["exts"]:
+            btn = Gtk.Button(label="." + ext)
+            btn.add_css_class("pill")
+            btn.set_tooltip_text("Remove ." + ext)
+            btn.connect("clicked", self._remove_ext, ext)
+            self.chip_flow.append(btn)
+
+    def _refresh_files(self):
+        self._clear_box(self.file_flow)
+        names = self._scan()
+        if not names:
+            self.file_flow.append(_dim("This folder is empty — add extensions "
+                                       "above."))
+            return
+        freq = self._ext_freq()
+
+        def rank(name):
+            ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+            return (-freq.get(ext, 0), name.lower())
+
+        for name in sorted(names, key=rank)[:48]:
+            ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+            btn = Gtk.ToggleButton()
+            btn.add_css_class("flat")
+            active = bool(ext) and ext in self.state["exts"]
+            btn.set_active(active)
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            box.append(Gtk.Image.new_from_icon_name("text-x-generic-symbolic"))
+            lbl = Gtk.Label(label=name)
+            lbl.set_ellipsize(Pango.EllipsizeMode.END)
+            lbl.set_max_width_chars(28)
+            box.append(lbl)
+            btn.set_child(box)
+            btn.connect("toggled", self._on_file_toggled, ext)
+            self.file_flow.append(btn)
+
+    def _refresh_count(self):
+        caught, total = self._counts()
+        if not self._regex_ok():
+            self.count_label.set_text("That regex isn't valid yet — check the "
+                                      "name pattern.")
+            return
+        if not self._has_matcher(self._rule_dict()):
+            self.count_label.set_text("Nothing selected yet — pick extensions "
+                                      "or a name match.")
+        elif total == 0:
+            self.count_label.set_text("No files here to preview, but this rule "
+                                      "is ready.")
+        else:
+            self.count_label.set_text(
+                f"This catches {caught} of {total} files in this folder.")
+
+    # ---- step 3: where should they go -----------------------------------
+    def _build_step3(self):
+        c = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        self._pad(c)
+        c.append(self._heading(WIZARD_STEPS[2]))
+        c.append(_dim("A new folder is created inside the watched folder the "
+                      "first time something matches."))
 
         if self.destinations:
             flow = Gtk.FlowBox()
             flow.set_selection_mode(Gtk.SelectionMode.NONE)
             flow.set_max_children_per_line(6)
-            flow.set_homogeneous(False)
             for name in self.destinations:
-                btn = Gtk.Button(label=f"{name}/", valign=Gtk.Align.CENTER)
+                btn = Gtk.Button(label=f"{name}/")
                 btn.add_css_class("pill")
                 btn.connect("clicked", self._pick_dest, name)
                 flow.append(btn)
-            c2.append(flow)
+            c.append(flow)
 
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         self.folder_entry = Gtk.Entry(placeholder_text="Photos")
+        self.folder_entry.set_hexpand(True)
         self.folder_entry.connect("changed", self._on_folder_changed)
-        c2.append(self._field("Destination folder", self.folder_entry))
-        c2.append(_dim("Examples: Photos, quant, Comics, Reports"))
+        browse = Gtk.Button(label="Browse…")
+        browse.connect("clicked", self._browse)
+        row.append(self.folder_entry)
+        row.append(browse)
+        c.append(self._field("Destination folder", row))
+        self.folder_hint = _dim("")
+        c.append(self.folder_hint)
 
-        self.btn_back2 = Gtk.Button(label="Back")
-        self.btn_back2.connect("clicked", lambda _b: self.view.pop())
-        self.btn_next2 = Gtk.Button(label="Next")
-        self.btn_next2.add_css_class("suggested-action")
-        self.btn_next2.set_sensitive(False)
-        self.btn_next2.connect("clicked", self._go_review)
-        self.page2 = self._page("Where should they go?", c2,
-                                [self.btn_back2], [self.btn_next2], can_pop=True)
+        tree_lbl = Gtk.Label(label="Where things live", xalign=0)
+        tree_lbl.add_css_class("heading")
+        c.append(tree_lbl)
+        self.tree_label = _dim("")
+        c.append(self.tree_label)
 
-        # ---------------- page 3: review
-        c3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-        self._pad(c3)
-        c3.append(Gtk.Label(label="Ready to add", xalign=0))
-        c3.get_last_child().add_css_class("title-3")
+        back = Gtk.Button(label="Back")
+        back.connect("clicked", lambda _b: self.view.pop())
+        nxt = Gtk.Button(label="Next")
+        nxt.add_css_class("suggested-action")
+        nxt.connect("clicked", lambda _b: self._enter_step4())
+        self.page3 = self._page(WIZARD_STEPS[2], c, [back], [nxt])
 
-        summary = _listbox()
-        self.review_match = Adw.ActionRow(title="Matches")
-        self.review_dest = Adw.ActionRow(title="Destination")
-        self.review_scope = Adw.ActionRow(title="Applies to")
-        for row in (self.review_match, self.review_dest, self.review_scope):
-            row.set_subtitle_lines(2)
-            summary.append(row)
-        c3.append(summary)
-        c3.append(_dim("This folder will get its own rules, separate from the "
-                       "shared defaults."))
+    def _pick_dest(self, _btn, name):
+        self.folder_entry.set_text(name)
 
-        self.btn_back3 = Gtk.Button(label="Back")
-        self.btn_back3.connect("clicked", lambda _b: self.view.pop())
-        self.btn_apply = Gtk.Button(label="Add rule")
-        self.btn_apply.add_css_class("suggested-action")
-        self.btn_apply.connect("clicked", self._apply)
-        self.page3 = self._page("Review", c3,
-                                [self.btn_back3], [self.btn_apply], can_pop=True)
-
-        # initial selection (after all widgets exist)
-        self.mode_list.select_row(self.mode_list.get_row_at_index(0))
-
-    # -- behaviour --------------------------------------------------------
-    def _on_mode(self, _listbox, row):
-        if row is None:
-            return
-        self.state["mode"] = row._mode
-        self.entry_stack.set_visible_child_name(row._mode)
-        self._on_input()
-
-    def _on_input(self, *_):
-        if self.state["mode"] == "ext":
-            ok = bool(_split_exts(self.ext_entry.get_text()))
+    def _on_folder_changed(self, entry):
+        text = entry.get_text().strip()
+        self.state["folder"] = text
+        safe = safe_category_name(text) if text else None
+        if not text:
+            self.folder_hint.set_text("Type a name, pick a suggestion, or "
+                                      "Browse…")
+        elif safe is None:
+            self.folder_hint.set_text("That name can't be used for a folder — "
+                                      "try letters, numbers and dashes.")
         else:
-            ok = bool(self.name_entry.get_text().strip())
-        self.btn_next1.set_sensitive(ok)
+            self.folder_hint.set_text(
+                f"Files will go to {self._root_name()}/{safe}/")
+        self._refresh_tree()
 
-    def _suggest_folder(self) -> str:
-        if self.state["mode"] == "ext":
-            exts = _split_exts(self.ext_entry.get_text())
-            if exts:
-                rules, _ = self.cfg.rules_for(self.root)
-                for cat in rules:
-                    have = [str(e).lstrip(".") for e in cat.get("extensions", [])]
-                    if exts[0] in have:
-                        return cat.get("name", exts[0])
-                return exts[0]
-            return ""
-        text = self.name_entry.get_text().strip()
+    def _refresh_tree(self):
+        lines = [f"{self._root_name()}/"]
+        folder = self.state["folder"]
+        shown = False
+        for name in self.destinations:
+            marker = "  ← new" if name == folder else ""
+            shown = shown or name == folder
+            lines.append(f"    {name}/{marker}")
+        if folder and not shown:
+            lines.append(f"    {folder}/  ← new")
+        self.tree_label.set_text("\n".join(lines))
+
+    def _browse(self, _btn):
+        if not hasattr(Gtk, "FileDialog"):
+            self.win.toast("The folder picker needs a newer GTK")
+            return
+        dialog = Gtk.FileDialog()
+        dialog.set_title("Choose a destination folder")
+        dialog.set_initial_folder(Gio.File.new_for_path(str(expand(self.root))))
+        dialog.select_folder(self.win, None, self._browse_done)
+
+    def _browse_done(self, dialog, result):
+        try:
+            gfile = dialog.select_folder_finish(result)
+        except GLib.Error:
+            return
+        if gfile is None:
+            return
+        path = Path(gfile.get_path() or "")
+        try:
+            name = str(path.relative_to(expand(self.root)))
+        except ValueError:
+            name = path.name
+        self.folder_entry.set_text(safe_category_name(name) or path.name)
+
+    def _suggest_folder(self):
+        exts = self.state["exts"]
+        if exts:
+            for cat in self.existing:
+                have = [str(e).lstrip(".") for e in cat.get("extensions", [])]
+                if exts[0] in have:
+                    return cat.get("name", exts[0])
+            for _key, title, _sub, _icon, rex in WIZARD_RECIPES:
+                if exts[0] in rex:
+                    return title
+            return exts[0].capitalize()
+        text = self.state["name_text"].strip()
         if re.search("screenshot|capture|scree", text, re.IGNORECASE):
             return "Screenshots"
         return text[:1].upper() + text[1:] if text else ""
 
-    def _go_dest(self, _btn):
-        self.folder_entry.set_text(self._suggest_folder())
-        self.view.push(self.page2)
-
-    def _pick_dest(self, _btn, name: str):
-        self.folder_entry.set_text(name)
-
-    def _on_folder_changed(self, entry):
-        self.btn_next2.set_sensitive(bool(entry.get_text().strip()))
-
-    def _go_review(self, _btn):
-        folder = self.folder_entry.get_text().strip()
-        if not folder:
-            return
-        if self.state["mode"] == "ext":
-            exts = _split_exts(self.ext_entry.get_text())
-            match = "extension " + " ".join(f".{e}" for e in exts)
-        else:
-            match = f"file name contains “{self.name_entry.get_text().strip()}”"
-        root_name = expand(self.root).name or str(self.root)
-        self.review_match.set_subtitle(match)
-        self.review_dest.set_subtitle(f"{folder}/")
-        self.review_scope.set_subtitle(f"{root_name}  (own rules)")
+    def _enter_step3(self):
+        if not self.state["folder"]:
+            self.folder_entry.set_text(self._suggest_folder())
+        self._on_folder_changed(self.folder_entry)
+        self._refresh_priority()
         self.view.push(self.page3)
 
-    def _apply(self, _btn):
-        folder = self.folder_entry.get_text().strip()
-        if not folder:
+    def _enter_step4(self):
+        self.view.push(self.page4)
+
+    def _enter_step5(self):
+        self._refresh_priority()
+        self.view.push(self.page5)
+
+    # ---- step 4: fine-tune ----------------------------------------------
+    def _build_step4(self):
+        c = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        self._pad(c)
+        c.append(self._heading(WIZARD_STEPS[3]))
+        c.append(_dim("All optional — skip anything you don't need."))
+
+        box = _listbox()
+        self.min_row = Adw.SpinRow.new_with_range(0, 1_000_000, 1)
+        self.min_row.set_title("At least this many MB")
+        self.min_row.set_digits(0)
+        self.min_row.connect("notify::value", self._on_bounds)
+        box.append(self.min_row)
+
+        self.max_row = Adw.SpinRow.new_with_range(0, 1_000_000, 1)
+        self.max_row.set_title("At most this many MB")
+        self.max_row.set_digits(0)
+        self.max_row.connect("notify::value", self._on_bounds)
+        box.append(self.max_row)
+
+        self.days_row = Adw.SpinRow.new_with_range(0, 3650, 1)
+        self.days_row.set_title("Only files newer than (days)")
+        self.days_row.set_digits(0)
+        self.days_row.connect("notify::value", self._on_bounds)
+        box.append(self.days_row)
+
+        self.exclude_row = Adw.EntryRow(
+            title="Never match names matching (regex, optional)")
+        self.exclude_row.connect("changed", self._on_exclude)
+        box.append(self.exclude_row)
+
+        self.enabled_row = Adw.SwitchRow(title="Rule enabled")
+        self.enabled_row.set_active(True)
+        self.enabled_row.connect("notify::active", self._on_enabled)
+        box.append(self.enabled_row)
+
+        self.match_all_row = Adw.SwitchRow(
+            title="Require every condition",
+            subtitle="Off matches any condition (OR); on matches all (AND).")
+        self.match_all_row.connect("notify::active", self._on_match_all)
+        box.append(self.match_all_row)
+        c.append(box)
+
+        back = Gtk.Button(label="Back")
+        back.connect("clicked", lambda _b: self.view.pop())
+        nxt = Gtk.Button(label="Next")
+        nxt.add_css_class("suggested-action")
+        nxt.connect("clicked", lambda _b: self._enter_step5())
+        self.page4 = self._page(WIZARD_STEPS[3], c, [back], [nxt])
+
+    def _on_bounds(self, *_):
+        self.state["min_mb"] = self.min_row.get_value() or None
+        self.state["max_mb"] = self.max_row.get_value() or None
+        self.state["days"] = int(self.days_row.get_value()) or None
+
+    def _on_exclude(self, row):
+        self.state["exclude"] = row.get_text().strip()
+
+    def _on_enabled(self, row, _param):
+        self.state["enabled"] = row.get_active()
+
+    def _on_match_all(self, row, _param):
+        self.state["match_all"] = row.get_active()
+
+    # ---- step 5: priority & scope ---------------------------------------
+    def _build_step5(self):
+        c = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        self._pad(c)
+        c.append(self._heading(WIZARD_STEPS[4]))
+        c.append(_dim("Rules are tried top to bottom; the first one that matches "
+                      "wins. Move your new rule up to give it priority."))
+
+        nav = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        up = Gtk.Button(label="Move up")
+        up.connect("clicked", lambda _b: self._move_priority(-1))
+        down = Gtk.Button(label="Move down")
+        down.connect("clicked", lambda _b: self._move_priority(1))
+        nav.append(up)
+        nav.append(down)
+        c.append(nav)
+
+        self.priority_list = _listbox()
+        c.append(self.priority_list)
+        self.priority_warn = _dim("")
+        c.append(self.priority_warn)
+
+        back = Gtk.Button(label="Back")
+        back.connect("clicked", lambda _b: self.view.pop())
+        nxt = Gtk.Button(label="Next")
+        nxt.add_css_class("suggested-action")
+        nxt.connect("clicked", lambda _b: self._enter_step6())
+        self.page5 = self._page(WIZARD_STEPS[4], c, [back], [nxt])
+
+    def _move_priority(self, delta):
+        self._insert_index = max(0, min(self._insert_index + delta,
+                                        len(self.existing)))
+        self._refresh_priority()
+
+    def _ordered_rules(self):
+        idx = max(0, min(self._insert_index, len(self.existing)))
+        self._insert_index = idx
+        ordered = []
+        for i, cat in enumerate(self.existing):
+            if i == idx:
+                ordered.append(("new", self._rule_dict()))
+            ordered.append(("old", cat))
+        if idx >= len(self.existing):
+            ordered.append(("new", self._rule_dict()))
+        return ordered
+
+    def _refresh_priority(self):
+        if not hasattr(self, "priority_list"):
             return
-        if self.state["mode"] == "ext":
-            extensions, regex = _split_exts(self.ext_entry.get_text()), None
+        self._clear_box(self.priority_list)
+        ordered = self._ordered_rules()
+        for pos, (kind, cat) in enumerate(ordered, start=1):
+            row = Adw.ActionRow(
+                title=f"{pos}.  {cat.get('name') or '(new rule)'}")
+            row.set_subtitle(describe_rule(cat) or "no matchers")
+            if kind == "new":
+                row.add_suffix(Gtk.Label(label="NEW"))
+            else:
+                row.add_suffix(Gtk.Label(label="existing"))
+            self.priority_list.append(row)
+        self._update_priority_warning(ordered)
+
+    def _update_priority_warning(self, ordered):
+        names = self._scan()[:200]
+        if not names:
+            self.priority_warn.set_text("No files to check against yet.")
+            return
+        new_rule = self._rule_dict()
+        folder = new_rule.get("name") or "Wizard"
+        new_rule["name"] = folder
+        raw = [new_rule if kind == "new" else cat for kind, cat in ordered]
+        try:
+            alone = self.win.sorter.classify(names, rules=[new_rule])
+            together = self.win.sorter.classify(names, rules=raw)
+        except Exception:
+            self.priority_warn.set_text("")
+            return
+        mine = [n for n in names if alone.get(n) == folder]
+        stolen = [n for n in mine if together.get(n) != folder]
+        if not mine:
+            self.priority_warn.set_text("No files in this folder match yet "
+                                        "(fine if it's for files yet to come).")
+        elif stolen:
+            self.priority_warn.set_text(
+                f"Heads up: {len(stolen)} of {len(mine)} matching files would be "
+                "caught by an earlier rule first.")
         else:
-            extensions = []
-            regex = re.escape(self.name_entry.get_text().strip())
-        if self.win.apply_new_rule(self.root, folder, extensions, regex):
+            self.priority_warn.set_text(
+                f"Good — all {len(mine)} matching files reach this rule.")
+
+    # ---- step 6: review with proof --------------------------------------
+    def _build_step6(self):
+        c = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        self._pad(c)
+        c.append(self._heading(WIZARD_STEPS[5]))
+
+        card = _listbox()
+        self.review_name = Adw.ActionRow(title="Destination")
+        self.review_sentence = Adw.ActionRow(title="Reads as")
+        self.review_sentence.set_subtitle_lines(3)
+        self.review_position = Adw.ActionRow(title="Priority")
+        for row in (self.review_name, self.review_sentence, self.review_position):
+            card.append(row)
+        c.append(card)
+
+        self.anim_holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
+                                   spacing=6)
+        c.append(self.anim_holder)
+
+        back = Gtk.Button(label="Back")
+        back.connect("clicked", lambda _b: self.view.pop())
+        again = Gtk.Button(label="Save & add another")
+        again.connect("clicked", lambda _b: self._apply(True))
+        save = Gtk.Button(label="Save rule")
+        save.add_css_class("suggested-action")
+        save.connect("clicked", lambda _b: self._apply(False))
+        self.page6 = self._page(WIZARD_STEPS[5], c, [back], [again, save])
+
+    def _enter_step6(self):
+        rule = self._rule_dict()
+        folder = rule.get("name") or "(choose a folder)"
+        self.review_name.set_subtitle(f"{folder}/")
+        normalized = normalize_rule(rule) or rule
+        self.review_sentence.set_subtitle(describe_rule(normalized) or "—")
+        idx = max(0, min(self._insert_index, len(self.existing)))
+        self.review_position.set_subtitle(
+            f"position {idx + 1} of {len(self.existing) + 1} (first match wins)")
+        self._build_animation()
+        self.view.push(self.page6)
+
+    def _build_animation(self):
+        self._clear_box(self.anim_holder)
+        names = self._scan()
+        rule = self._rule_dict()
+        folder = rule.get("name") or "Wizard"
+        rule["name"] = folder
+        matched = []
+        if names:
+            try:
+                result = self.win.sorter.classify(names, rules=[rule])
+                matched = [n for n in names if result.get(n) == folder]
+            except Exception:
+                matched = []
+        shown = matched[:6]
+        for name in names:
+            if len(shown) >= 8:
+                break
+            if name not in shown:
+                shown.append(name)
+        self.anim_holder.append(SortPreview(shown, matched, folder))
+        if names:
+            caption = (f"{len(matched)} of {len(names)} files in this folder "
+                       "would sort here.")
+        else:
+            caption = "No files to show yet."
+        self.anim_holder.append(_dim(caption))
+
+    # ---- save -----------------------------------------------------------
+    def _apply(self, save_another):
+        rule = self._rule_dict()
+        folder = safe_category_name(rule.get("name") or "")
+        if not folder:
+            self.win.toast("Give the rule a destination folder name")
+            return
+        rule["name"] = folder
+        if not self._has_matcher(rule):
+            self.win.toast("Add at least one extension or a name match")
+            return
+        if not self._regex_ok():
+            self.win.toast("That regex isn't valid")
+            return
+        self.win._ensure_custom(self.root)
+        rules, _ = self.cfg.rules_for(self.root)
+        rules = [c for c in rules if c.get("name") != folder]
+        idx = max(0, min(self._insert_index, len(rules)))
+        rules.insert(idx, normalize_rule(rule))
+        self.win._save_rules(self.root, rules,
+                             toast=f"Saved {folder}/ to this folder")
+        if save_another:
+            self._reset_for_another()
+        else:
             self.dialog.close()
+
+    def _reset_for_another(self):
+        self._files = None
+        self.state.update({
+            "recipe": None, "exts": [], "name_mode": "none", "name_text": "",
+            "folder": "", "min_mb": None, "max_mb": None, "days": None,
+            "exclude": "", "enabled": True, "match_all": False,
+        })
+        self.name_entry.set_text("")
+        for btn in self.name_buttons.values():
+            btn.set_active(False)
+        self.folder_entry.set_text("")
+        self.min_row.set_value(0)
+        self.max_row.set_value(0)
+        self.days_row.set_value(0)
+        self.exclude_row.set_text("")
+        self.enabled_row.set_active(True)
+        self.match_all_row.set_active(False)
+        self._insert_index = len(self.cfg.rules_for(self.root)[0])
+        self.view.pop_to_page(self.page1)
+
+    # ---- suggest rules --------------------------------------------------
+    def _build_suggest(self):
+        c = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        self._pad(c)
+        c.append(self._heading("Rules I can suggest"))
+        self.suggest_intro = _dim("")
+        c.append(self.suggest_intro)
+        self.suggest_list = _listbox()
+        c.append(self.suggest_list)
+
+        back = Gtk.Button(label="Back")
+        back.connect("clicked", lambda _b: self.view.pop())
+        add = Gtk.Button(label="Add selected rules")
+        add.add_css_class("suggested-action")
+        add.connect("clicked", self._add_suggestions)
+        self.page_suggest = self._page("Suggest rules", c, [back], [add])
+
+    def _magic_suggest(self):
+        freq = self._ext_freq()
+        if not freq:
+            self.win.toast("No files in this folder to learn from yet")
+            return
+        groups: dict[str, list[str]] = {}
+        for ext, _count in sorted(freq.items(),
+                                  key=lambda kv: (-kv[1], kv[0])):
+            groups.setdefault(self._recipe_folder(ext), []).append(ext)
+        self._clear_box(self.suggest_list)
+        self._suggest_checks = []
+        for folder, exts in groups.items():
+            check = Gtk.CheckButton(
+                label=f"{folder}/   ←   " + ", ".join("." + e for e in exts))
+            check.set_active(True)
+            self._suggest_checks.append((check, folder, exts))
+            self.suggest_list.append(check)
+        self.suggest_intro.set_text(
+            f"Based on {len(self._scan())} files, here are {len(groups)} rules "
+            "I can add. Untick anything you don't want.")
+        self.view.push(self.page_suggest)
+
+    @staticmethod
+    def _recipe_folder(ext):
+        for _key, title, _sub, _icon, exts in WIZARD_RECIPES:
+            if ext in exts:
+                return title
+        return ext.capitalize()
+
+    def _add_suggestions(self, _btn):
+        added = 0
+        self.win._ensure_custom(self.root)
+        rules, _ = self.cfg.rules_for(self.root)
+        have = {c.get("name") for c in rules}
+        for check, folder, exts in self._suggest_checks:
+            if not check.get_active() or folder in have:
+                continue
+            rules.append(normalize_rule({"name": folder,
+                                         "extensions": list(exts)}))
+            have.add(folder)
+            added += 1
+        if not added:
+            self.win.toast("Nothing new to add")
+            return
+        self.win._save_rules(self.root, rules, toast=f"Added {added} rule(s)")
+        self.dialog.close()
 
 
 # ------------------------------------------------------ advanced editor ------
@@ -1316,8 +2136,8 @@ class AdvancedDialog:
 
         self.dialog = Adw.Dialog(
             title="Edit rule" if self.old_name else "Advanced rule")
-        self.dialog.set_content_width(600)
-        self.dialog.set_content_height(680)
+        self.dialog.set_content_width(1000)
+        self.dialog.set_content_height(820)
 
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)

@@ -371,6 +371,28 @@ def _rule_filter_clauses(rule: dict) -> list[str]:
     return out
 
 
+def name_matcher_regex(mode: str, text: str) -> str | None:
+    """Build a rule's ``match_name_regex`` from a friendly wizard choice.
+
+    ``mode`` is ``contains`` / ``starts`` / ``ends`` / ``regex``. Plain text is
+    escaped so it can never be mistaken for regex syntax; ``regex`` is passed
+    through untouched. Empty text (or mode ``none``) yields ``None``.
+    """
+    text = (text or "").strip()
+    if not text or mode == "none":
+        return None
+    if mode == "regex":
+        return text
+    escaped = re.escape(text)
+    if mode == "contains":
+        return escaped
+    if mode == "starts":
+        return "^" + escaped
+    if mode == "ends":
+        return escaped + "$"
+    return None
+
+
 def describe_rule(rule: dict) -> str:
     """One friendly sentence describing what a rule catches."""
     clauses = _rule_match_clauses(rule)
