@@ -26,8 +26,44 @@ from pathlib import Path
 
 from .config import Config, atomic_write_text, safe_category_name
 
-# suffixes that mean "still being written"
-IN_PROGRESS_SUFFIXES = (".part", ".crdownload", ".download", ".tmp", ".partial")
+# suffixes that mean "still being written" — the file is a half-finished
+# download and must never be sorted while the suffix is present. The browser
+# or download manager renames the file to its final name when it finishes,
+# which is the definitive "done" signal Tier 1 detection relies on.
+IN_PROGRESS_SUFFIXES = (
+    ".part",        # Firefox, wget, apt, most download managers
+    ".crdownload",  # Chrome / Edge / Brave / Chromium
+    ".download",    # Safari
+    ".opdownload",  # Opera
+    ".partial",     # Chrome stable channel / misc
+    ".tmp",         # generic temp files
+    ".filepart",    # some browsers / download managers
+    ".ytdl",        # yt-dlp partial files
+    ".!qb",         # qBittorrent incomplete download
+    ".un~",         # uTorrent incomplete download
+)
+
+# extra-cautious settling: files this large get a longer settle window
+_LARGE_FILE_MB = 100.0   # MB beyond which size scales the settle window
+_EXTRA_PER_100_MB = 4.0   # +4 s per additional 100 MB
+_MAX_EXTRA_SETTLE = 60.0  # ... capped at one extra minute
+_MTIME_TOLERANCE = 0.25   # s — a rewrite bumps mtime; coarse FS is ~low
+
+
+def settle_window_seconds(size_bytes: float, base_seconds: float) -> float:
+    """How long a file of `size_bytes` must keep its size and mtime still.
+
+    Extra-cautious by design: a 3 GB download must stay quiet for at least
+    `base_seconds + 60` before we trust it, a 200 MB one for `+4`, while
+    anything under 100 MB just uses the base window unchanged.
+    """
+    if base_seconds <= 0:
+        return 0.0
+    mb = size_bytes / (1024.0 * 1024.0)
+    if mb <= _LARGE_FILE_MB:
+        return base_seconds
+    extra = (mb - _LARGE_FILE_MB) / 100.0 * _EXTRA_PER_100_MB
+    return base_seconds + min(extra, _MAX_EXTRA_SETTLE)
 
 
 def expand(p) -> Path:
@@ -63,26 +99,36 @@ def looks_in_progress(name: str) -> bool:
     return any(lowered.endswith(s) for s in IN_PROGRESS_SUFFIXES)
 
 
-def is_stable(path: Path, min_seconds: float, interval: float = 0.5) -> bool:
-    """True only if the file is old enough and its size held still.
+def is_stable(path: Path, min_seconds: float, interval: float = 0.5,
+              min_probes: int = 3) -> bool:
+    """True only if the file is old enough and its size AND mtime held still.
 
-    Note: an unchanged size is a strong hint but not a guarantee that a
-    download has finished; files that resume slowly can still slip through.
-    Callers that need stricter guarantees should raise ``min_seconds``.
+    Extra-cautious: samples ``min_probes`` times spaced ``interval`` apart and
+    requires both size and mtime to stay constant — a download resuming (size
+    grows) or a file being rewritten in place (mtime bumps) resets the check.
+    Large files get a proportionally longer settle window first
+    (:func:`settle_window_seconds`).
     """
     try:
         st1 = path.stat()
     except OSError:
         return False
-    if min_seconds > 0 and time.time() - st1.st_mtime < min_seconds:
-        return False
+    if min_seconds > 0:
+        window = settle_window_seconds(st1.st_size, min_seconds)
+        if time.time() - st1.st_mtime < window:
+            return False
     size1 = st1.st_size
-    time.sleep(interval)
-    try:
-        st2 = path.stat()
-    except OSError:
-        return False
-    return st2.st_size == size1
+    mtime1 = st1.st_mtime
+    for _ in range(max(min_probes - 1, 0)):
+        time.sleep(interval)
+        try:
+            st2 = path.stat()
+        except OSError:
+            return False
+        if (st2.st_size != size1
+                or abs(st2.st_mtime - mtime1) > _MTIME_TOLERANCE):
+            return False
+    return True
 
 
 def unique_path(dest: Path) -> Path:
@@ -279,9 +325,11 @@ class Sorter:
     # -- sweeping --------------------------------------------------------
     def sweep(self, roots: list[Path] | None = None, dry_run: bool = False) -> dict:
         roots = roots if roots is not None else self.roots()
-        stats = {"moved": 0, "needs_review": 0, "skipped": 0, "failed": 0}
+        stats = {"moved": 0, "needs_review": 0, "skipped": 0, "failed": 0,
+                 "held": 0, "held_files": []}
         min_stable = float(self._settings.get("min_stable_seconds", 3))
         interval = float(self._settings.get("stability_interval", 0.5))
+        cautious = bool(self._settings.get("cautious_downloads", True))
         for root in roots:
             if not root.is_dir():
                 continue
@@ -292,8 +340,11 @@ class Sorter:
                 continue
 
             # First pass: pick the files that are eligible right now and
-            # remember their size.
-            candidates: list[tuple[Path, int]] = []
+            # remember their size. Anything clearly mid-download (progress
+            # suffix) or still inside its settle window is "held" — parked,
+            # reported, and never sorted.
+            held_here: list[str] = []
+            candidates: list[tuple[Path, int, float]] = []
             for entry in entries:
                 try:
                     if entry.is_dir() or entry.is_symlink() or entry.name.startswith("."):
@@ -302,39 +353,54 @@ class Sorter:
                     stats["skipped"] += 1
                     continue
                 if looks_in_progress(entry.name):
-                    stats["skipped"] += 1
+                    held_here.append(entry.name)
                     continue
                 try:
                     st = entry.stat()
                 except OSError:
                     stats["skipped"] += 1
                     continue
-                if min_stable > 0 and time.time() - st.st_mtime < min_stable:
-                    stats["skipped"] += 1
-                    continue
-                candidates.append((entry, st.st_size))
+                if min_stable > 0:
+                    window = settle_window_seconds(st.st_size, min_stable)
+                    if time.time() - st.st_mtime < window:
+                        held_here.append(entry.name)
+                        continue
+                candidates.append((entry, st.st_size, st.st_mtime))
 
             if not candidates:
+                stats["held"] += len(held_here)
+                stats["held_files"].extend(held_here)
                 continue
 
-            # Second pass: wait once for the whole batch, then only move the
-            # files whose size held still. (A single wait per root instead of
-            # one 0.5s wait per file.)
-            if not dry_run:
+            # Confirmation probes: wait once, twice in extra-cautious mode,
+            # and only keep moving files whose size — and, when cautious,
+            # mtime too — held still between probes. A single batch wait per
+            # root instead of one wait per file.
+            qualifying: list[tuple[Path, int, float]] = candidates
+            probes = 2 if (cautious and not dry_run) else (1 if not dry_run else 0)
+            for _ in range(probes):
                 time.sleep(interval)
-
-            for entry, size1 in candidates:
-                if not entry.exists():
-                    stats["skipped"] += 1
-                    continue
-                if not dry_run:
+                kept: list[tuple[Path, int, float]] = []
+                for entry, size1, mtime1 in qualifying:
+                    if not entry.exists():
+                        stats["skipped"] += 1
+                        continue
                     try:
-                        if entry.stat().st_size != size1:
-                            stats["skipped"] += 1
-                            continue
+                        st = entry.stat()
                     except OSError:
                         stats["skipped"] += 1
                         continue
+                    if (st.st_size != size1
+                            or abs(st.st_mtime - mtime1) > _MTIME_TOLERANCE):
+                        held_here.append(entry.name)
+                        continue
+                    kept.append((entry, size1, mtime1))
+                qualifying = kept
+
+            stats["held"] += len(held_here)
+            stats["held_files"].extend(held_here)
+
+            for entry, _size1, _mtime1 in qualifying:
                 try:
                     category = self.sort_file(entry, root, dry_run=dry_run)
                 except (OSError, shutil.Error) as exc:

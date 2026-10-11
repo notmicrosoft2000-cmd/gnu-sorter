@@ -790,6 +790,14 @@ class MainWindow(Adw.ApplicationWindow):
                             active=bool(s.get("dry_run_default", False)))
         dry.connect("notify::active", self._set_setting, "dry_run_default", bool)
         extras.add(dry)
+
+        cautious = Adw.SwitchRow(
+            title="Extra-cautious download detection",
+            subtitle="Wait for downloads to fully settle before sorting them",
+            active=bool(s.get("cautious_downloads", True)))
+        cautious.connect("notify::active", self._set_setting,
+                         "cautious_downloads", bool)
+        extras.add(cautious)
         page.add(extras)
 
         startup = Adw.PreferencesGroup(title="Startup")

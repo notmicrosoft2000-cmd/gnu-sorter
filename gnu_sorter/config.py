@@ -86,6 +86,7 @@ DEFAULT_ROOTS = {"roots": [{"path": "~/Downloads", "enabled": True}]}
 DEFAULT_SETTINGS = {
     "min_stable_seconds": 3,
     "stability_interval": 0.5,
+    "cautious_downloads": True,
     "watch_interval": 2,
     "notifications": True,
     "dry_run_default": False,

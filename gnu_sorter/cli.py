@@ -318,10 +318,16 @@ def main(argv: list[str] | None = None) -> int:
         summary = (f"\n{verb} {stats['moved']} file(s); "
                    f"{stats['needs_review']} → Needs-review/ "
                    f"({stats['skipped']} skipped")
+        if stats.get("held"):
+            summary += f", {stats['held']} waiting (downloads / too fresh)"
         if stats.get("failed"):
             summary += f", {stats['failed']} failed"
         summary += f") ({'preview' if dry else 'live'})"
         print(summary)
+        if dry and stats.get("held_files"):
+            print("waiting (still downloading / too fresh):")
+            for name in stats["held_files"][:10]:
+                print(f"  {name}")
         return 0
 
     # ---- default: GUI --------------------------------------------------
