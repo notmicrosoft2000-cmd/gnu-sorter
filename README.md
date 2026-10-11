@@ -16,13 +16,25 @@
 
 ## Screenshots
 
-| Folders | Rules (split view) | Advanced editor | Activity |
+| Folders | Rules (per-folder) | Advanced editor | Activity |
 |---|---|---|---|
 | ![Folders](docs/images/app-folders.png) | ![Rules](docs/images/app-rules.png) | ![Advanced editor](docs/images/app-advanced-rules.png) | ![Activity](docs/images/app-activity.png) |
 
 | Settings | About |
 |---|---|
 | ![Settings](docs/images/app-settings.png) | ![About](docs/images/app-about.png) |
+
+### Add a rule in six guided steps
+
+The **rule wizard** walks you through it: pick what to tidy, choose what to catch, and it suggests a destination — then proves the result on your real files before you save.
+
+| 1 · What to tidy | 2 · What to catch | 3 · Where it goes |
+|---|---|---|
+| ![Wizard step 1](docs/images/app-wizard-1.png) | ![Wizard step 2](docs/images/app-wizard-2.png) | ![Wizard step 3](docs/images/app-wizard-3.png) |
+
+| 4 · Fine-tune | 5 · Priority & scope | 6 · Review with proof |
+|---|---|---|
+| ![Wizard step 4](docs/images/app-wizard-4.png) | ![Wizard step 5](docs/images/app-wizard-5.png) | ![Wizard step 6](docs/images/app-wizard-6.png) |
 
 See more: [Website](https://notmicrosoft2000-cmd.github.io/gnu-sorter/) · [Documentation](https://notmicrosoft2000-cmd.github.io/gnu-sorter/docs.html)
 
