@@ -155,7 +155,7 @@ Advanced form.
 | Phase | Theme | Linux | Windows |
 |------|-------|-------|---------|
 | 1 | Download detection (two-tier hold) | ✅ engine+cli+gui+tests on main | ✅ pushed `0b9f50f`, MSBuild CI validating |
-| 2 | Journal v2 & restore | ⏳ | ⏳ |
+| 2 | Journal v2 & restore | ✅ done (`tests/test_journal.py`, CLI selectors, rotation, v2 schema) | ⏳ mirror in C# + selectors/notifications |
 | 3 | Rule wizard (5 steps) | ⏳ | ⏳ |
 | 4 | Design & mascot | ⏳ | ⏳ |
 

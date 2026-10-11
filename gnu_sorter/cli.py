@@ -37,6 +37,23 @@ def build_parser() -> argparse.ArgumentParser:
                            "commands, the folder whose rules to edit")
     mode.add_argument("--undo-last", type=int, metavar="N",
                       help="only reverse the last N moves")
+    mode.add_argument("--journal", action="store_true",
+                      help="list the move journal (newest first)")
+    mode.add_argument("--restore", action="store_true",
+                      help="restore files by selector (--folder, --rule, "
+                           "--since, --before)")
+    mode.add_argument("--limit", type=int, metavar="N",
+                      help="limit --journal to the last N entries")
+    mode.add_argument("--since", metavar="DUR",
+                      help="only entries newer than DUR (e.g. 30m, 2h, 7d)")
+    mode.add_argument("--before", metavar="TIMESTAMP",
+                      help="only entries older than YYYY-MM-DD[ HH:MM:SS]")
+    mode.add_argument("--folder", metavar="PATH",
+                      help="only entries sorted into this folder")
+    mode.add_argument("--rule", metavar="NAME",
+                      help="only entries caught by this rule")
+    mode.add_argument("--repair", action="store_true",
+                      help="drop malformed journal lines (with --journal)")
 
     p.add_argument("--config", metavar="DIR", help="use a different config directory")
 
@@ -272,8 +289,31 @@ def main(argv: list[str] | None = None) -> int:
 
     roots = [expand(r) for r in args.root] if args.root else None
 
-    if args.undo:
-        sorter.undo(dry_run=dry, limit=args.undo_last)
+    if args.journal:
+        if args.repair:
+            dropped = sorter.repair_journal()
+            print(f"journal repaired: removed {dropped} malformed entry/-ies.")
+        rows = sorter.records(limit=args.limit, since=args.since,
+                              before=args.before, folder=args.folder,
+                              rule=args.rule)
+        if not rows:
+            print("journal is empty.")
+        else:
+            for r in reversed(rows):
+                rule = r.get("rule") or "?"
+                print(f"{r['ts']}  [{rule}]  {fmt(Path(r['src']))}  ->  "
+                      f"{fmt(Path(r['dest']).parent)}/")
+            print(f"({len(rows)} entries)")
+        return 0
+
+    if args.undo or args.restore:
+        if args.restore and not (args.folder or args.rule
+                                 or args.since or args.before):
+            print("--restore needs a selector: --folder, --rule, --since "
+                  "or --before", file=sys.stderr)
+            return 2
+        sorter.undo(dry_run=dry, limit=args.undo_last, since=args.since,
+                    before=args.before, folder=args.folder, rule=args.rule)
         return 0
 
     if args.watch:

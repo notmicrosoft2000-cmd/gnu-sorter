@@ -21,7 +21,8 @@ import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime
+import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from .config import Config, atomic_write_text, safe_category_name
@@ -84,14 +85,114 @@ def timestamp() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+JOURNAL_VERSION = 2
+_ROTATE_BYTES = 1_000_000     # journal grows to ~1 MB before trimming
+_ROTATE_KEEP = 2500           # keep the most recent 2500 entries when trimming
+_MTIME_MATCH_TOLERANCE = 2.0  # s — coarse filesystems vs. journal mtime
+
+_DURATION_RE = re.compile(r"^(\d+)\s*([smhdw])$")
+
+
+def _journal_record(ts: str, src: str, dest: str, *, size=None, mtime=None,
+                    rule: str | None = None, root: str | None = None,
+                    batch: str | None = None) -> dict:
+    """Build one journal v2 entry with rich metadata.
+
+    Batch ids group the moves of one sweep so undo can reason about whole
+    operations; size/mtime power the already-restored detection.
+    """
+    rec: dict = {"v": JOURNAL_VERSION, "id": uuid.uuid4().hex,
+                 "ts": ts, "src": src, "dest": dest}
+    if size is not None:
+        rec["size"] = size
+    if mtime is not None:
+        rec["mtime"] = mtime
+    if rule is not None:
+        rec["rule"] = rule
+    if root is not None:
+        rec["root"] = root
+    if batch is not None:
+        rec["batch"] = batch
+    return rec
+
+
 def _journal_line(ts: str, src: str, dest: str) -> str:
-    """Serialize one journal entry.
+    """Serialize one minimal (v1) journal entry.
 
     JSON (rather than tab-separated fields) keeps names that contain tabs or
     newlines intact, so undo can always restore them.
     """
     return json.dumps({"ts": ts, "src": src, "dest": dest},
                       ensure_ascii=False) + "\n"
+
+
+def _journal_line_v2(rec: dict) -> str:
+    return json.dumps(rec, ensure_ascii=False) + "\n"
+
+
+def _parse_record(line: str) -> dict | None:
+    """Parse one journal line into a record dict (any schema version), else None."""
+    line = line.strip()
+    if not line:
+        return None
+    if line.startswith("{"):                 # v1 / v2 JSON
+        try:
+            d = json.loads(line)
+        except ValueError:
+            return None
+        if "src" not in d or "dest" not in d:
+            return None
+        return {"v": d.get("v", 1), "id": d.get("id"), "batch": d.get("batch"),
+                "ts": str(d.get("ts", "")), "src": str(d.get("src", "")),
+                "dest": str(d.get("dest", "")), "size": d.get("size"),
+                "mtime": d.get("mtime"), "rule": d.get("rule"),
+                "root": d.get("root")}
+    if line.count("\t") >= 2:                # legacy tab-separated (v0)
+        ts, src, dest = line.split("\t", 2)
+        return {"v": 0, "id": None, "batch": None, "ts": ts, "src": src,
+                "dest": dest, "size": None, "mtime": None,
+                "rule": None, "root": None}
+    return None
+
+
+def _ts_dt(ts: str):
+    try:
+        return datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_duration(text: str) -> timedelta:
+    m = _DURATION_RE.match(text.strip().lower())
+    if not m:
+        raise ValueError(f"bad duration {text!r} (use e.g. 30m, 2h, 7d)")
+    n, unit = int(m.group(1)), m.group(2)
+    return timedelta(seconds=n * {"s": 1, "m": 60, "h": 3600,
+                                  "d": 86400, "w": 604800}[unit])
+
+
+def _parse_before(text: str):
+    t = text.strip()
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(t, fmt)
+        except ValueError:
+            continue
+    raise ValueError(f"bad timestamp {text!r} "
+                     f"(use YYYY-MM-DD or 'YYYY-MM-DD HH:MM:SS')")
+
+
+def _same_file(rec: dict, path: Path) -> bool:
+    """True if `path` looks like the same file the journal recorded (size and
+    mtime match) — i.e. it is already back where it used to be."""
+    if rec.get("size") is None or rec.get("mtime") is None:
+        return False
+    try:
+        st = path.stat()
+    except OSError:
+        return False
+    return (st.st_size == rec["size"]
+            and abs(st.st_mtime - rec["mtime"]) <= _MTIME_MATCH_TOLERANCE)
 
 
 def looks_in_progress(name: str) -> bool:
@@ -296,13 +397,30 @@ class Sorter:
                   f"using Needs-review/", file=sys.stderr)
         return root / "Needs-review", "Needs-review"
 
-    def _journal(self, src: Path, dest: Path) -> None:
+    def _journal(self, src: Path, dest: Path, rule: str, root: str,
+                 batch: str, size=None, mtime=None) -> None:
+        """Append one journal v2 entry; trim the file when it grows too
+        large so the history never balloons."""
+        rec = _journal_record(timestamp(), str(src), str(dest),
+                              size=size, mtime=mtime, rule=rule, root=root,
+                              batch=batch)
         self.config.history_path.parent.mkdir(parents=True, exist_ok=True)
         with self.config.history_path.open("a", encoding="utf-8") as fh:
-            fh.write(_journal_line(timestamp(), str(src), str(dest)))
+            fh.write(_journal_line_v2(rec))
+        try:
+            if self.config.history_path.stat().st_size > _ROTATE_BYTES:
+                self._rotate_journal()
+        except OSError:
+            pass
+
+    def _rotate_journal(self) -> None:
+        loaded = self._read_journal()
+        kept = loaded[-_ROTATE_KEEP:]
+        atomic_write_text(self.config.history_path,
+                          "".join(line + "\n" for line, _rec in kept))
 
     def sort_file(self, path: Path, root: Path, dry_run: bool = False,
-                  quiet: bool = False) -> str:
+                  quiet: bool = False, batch: str | None = None) -> str:
         """Sort one file into a category folder inside `root`."""
         try:
             stat = path.stat()
@@ -317,7 +435,11 @@ class Sorter:
             return category
         dest_dir.mkdir(parents=True, exist_ok=True)
         shutil.move(str(path), str(dest))
-        self._journal(path, dest)
+        self._journal(
+            path, dest, category, str(root),
+            batch or uuid.uuid4().hex,
+            size=stat.st_size if stat else None,
+            mtime=stat.st_mtime if stat else None)
         if not quiet:
             print(f"  moved       {fmt(path)}  ->  {category}/{dest.name}")
         return category
@@ -330,6 +452,7 @@ class Sorter:
         min_stable = float(self._settings.get("min_stable_seconds", 3))
         interval = float(self._settings.get("stability_interval", 0.5))
         cautious = bool(self._settings.get("cautious_downloads", True))
+        batch = uuid.uuid4().hex    # one operation id for this whole sweep
         for root in roots:
             if not root.is_dir():
                 continue
@@ -402,7 +525,8 @@ class Sorter:
 
             for entry, _size1, _mtime1 in qualifying:
                 try:
-                    category = self.sort_file(entry, root, dry_run=dry_run)
+                    category = self.sort_file(entry, root, dry_run=dry_run,
+                                              batch=batch)
                 except (OSError, shutil.Error) as exc:
                     # One un-sortable file (permissions, locks, …) must not
                     # abort the rest of the sweep.
@@ -415,58 +539,118 @@ class Sorter:
                     stats["needs_review"] += 1
         return stats
 
-    # -- undo ------------------------------------------------------------
-    def history(self, limit: int | None = None) -> list[tuple[str, str, str]]:
+    # -- journal / undo (v2) --------------------------------------------
+    def _read_journal(self) -> list[tuple[str, dict]]:
+        """(raw_line, record) pairs in file order; malformed lines dropped."""
         if not self.config.history_path.is_file():
             return []
-        rows: list[tuple[str, str, str]] = []
+        out: list[tuple[str, dict]] = []
         for line in self.config.history_path.read_text(
                 encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith("{"):                 # current JSON format
-                try:
-                    rec = json.loads(line)
-                    rows.append((str(rec["ts"]), str(rec["src"]),
-                                 str(rec["dest"])))
-                except (ValueError, KeyError, TypeError):
-                    continue
-                continue
-            if line.count("\t") >= 2:                # legacy tab-separated
-                ts, src, dest = line.split("\t", 2)
-                rows.append((ts, src, dest))
-        return rows[-limit:] if limit else rows
+            rec = _parse_record(line)
+            if rec is not None:
+                out.append((line, rec))
+        return out
 
-    def undo(self, dry_run: bool = False, limit: int | None = None) -> int:
-        rows = self.history()
-        if not rows:
+    def _select(self, loaded: list, limit=None, since=None, before=None,
+                folder=None, rule=None) -> list:
+        rows = loaded
+        if limit is not None and limit <= 0:
+            return []
+        if since:
+            cutoff = datetime.now() - _parse_duration(since)
+            rows = [x for x in rows
+                    if (dt := _ts_dt(x[1]["ts"])) is not None and dt >= cutoff]
+        if before:
+            cutoff = _parse_before(before)
+            rows = [x for x in rows
+                    if (dt := _ts_dt(x[1]["ts"])) is not None and dt < cutoff]
+        if folder:
+            folder_path = str(Path(folder))
+            rows = [x for x in rows
+                    if str(Path(x[1]["dest"]).parent) == folder_path]
+        if rule:
+            wanted = rule.lower()
+            rows = [x for x in rows
+                    if (x[1].get("rule") or "").lower() == wanted]
+        if limit:
+            rows = rows[-limit:]
+        return rows
+
+    def records(self, limit: int | None = None, since: str | None = None,
+                before: str | None = None, folder: str | None = None,
+                rule: str | None = None) -> list[dict]:
+        """Journal entries (chronological order) as rich dicts, with selectors."""
+        return [rec for _line, rec in
+                self._select(self._read_journal(), limit, since, before,
+                             folder, rule)]
+
+    def history(self, limit: int | None = None) -> list[tuple[str, str, str]]:
+        return [(r["ts"], r["src"], r["dest"])
+                for r in self.records(limit=limit)]
+
+    def undo(self, dry_run: bool = False, limit: int | None = None,
+             since: str | None = None, before: str | None = None,
+             folder: str | None = None, rule: str | None = None) -> int:
+        """Restore previously sorted files, dropping restored entries from the
+        journal so a later undo never replays them.
+
+        Selectors: ``limit`` (last N), ``since``/``before`` (time window),
+        ``folder`` (entries sorted into this folder), ``rule`` (caught by this
+        rule). Collision-safe: an occupied original path restores to
+        "name (1).ext" unless the file already there matches the journal (size
+        + mtime) — then it is treated as already restored and dropped.
+        """
+        loaded = self._read_journal()
+        if not loaded:
             print("nothing to undo.")
             return 0
-        if limit is None:
-            to_undo = rows
-        elif limit > 0:
-            to_undo = rows[-limit:]
-        else:
-            to_undo = []                             # --undo-last 0 = nothing
-        rest = rows[: len(rows) - len(to_undo)]
+        to_undo = self._select(loaded, limit, since, before, folder, rule)
+        if not to_undo:
+            print("nothing matches those selectors.")
+            return 0
+        sel_ids = {id(x) for x in to_undo}
+        rest = [x for x in loaded if id(x) not in sel_ids]
         restored = 0
         skipped = 0
-        for ts, src, dest in reversed(to_undo):
-            src_p, dest_p = Path(src), Path(dest)
+        changed = 0
+        for _raw, rec in reversed(to_undo):
+            src_p, dest_p = Path(rec["src"]), Path(rec["dest"])
             if not dest_p.exists():
-                print(f"  skipped        {fmt(dest_p)}  (no longer there)")
-                rest.append((ts, src, dest))
+                print(f"  skipped      {fmt(dest_p)}  (no longer there)")
+                rest.append((_raw, rec))
                 skipped += 1
                 continue
+            if rec.get("size") is not None:
+                try:
+                    size_now = dest_p.stat().st_size
+                except OSError:
+                    size_now = None
+                if size_now is not None and size_now != rec["size"]:
+                    print(f"  * {fmt(dest_p)} changed size since sorting; "
+                          f"restoring anyway")
+                    changed += 1
             if src_p.exists():
-                # Never clobber something that is already back at the source.
-                print(f"  skipped        {fmt(src_p)}  (already exists; not overwriting)")
-                rest.append((ts, src, dest))
-                skipped += 1
+                if _same_file(rec, src_p):
+                    print(f"  already back {fmt(src_p)}")
+                    skipped += 1
+                    continue              # done — drop from the journal
+                target = unique_path(src_p)     # collision-safe restore
+                print(f"  {fmt(src_p)} occupied; restoring to {fmt(target)}")
+                if not dry_run:
+                    try:
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.move(str(dest_p), str(target))
+                    except OSError as exc:
+                        print(f"!! undo failed {fmt(dest_p)} -> {fmt(target)}: {exc}",
+                              file=sys.stderr)
+                        rest.append((_raw, rec))
+                        skipped += 1
+                        continue
+                restored += 1
                 continue
             if dry_run:
-                print(f"  would restore  {fmt(dest_p)}  ->  {fmt(src_p)}")
+                print(f"  would restore {fmt(dest_p)}  ->  {fmt(src_p)}")
                 restored += 1
                 continue
             try:
@@ -475,18 +659,31 @@ class Sorter:
             except OSError as exc:
                 print(f"!! undo failed {fmt(dest_p)}  ->  {fmt(src_p)}: {exc}",
                       file=sys.stderr)
-                rest.append((ts, src, dest))
+                rest.append((_raw, rec))
                 skipped += 1
                 continue
-            print(f"  restored       {fmt(dest_p)}  ->  {fmt(src_p)}")
+            print(f"  restored     {fmt(dest_p)}  ->  {fmt(src_p)}")
             restored += 1
         if not dry_run:
-            ordered = sorted(rest, key=lambda r: r[0])
             atomic_write_text(
                 self.config.history_path,
-                "".join(_journal_line(t, s, d) for t, s, d in ordered))
+                "".join(line + "\n" for line, _rec in rest))
         summary = f"undo complete: {restored} file(s) restored"
+        if changed:
+            summary += f", {changed} changed before restore"
         if skipped:
             summary += f", {skipped} skipped"
         print(summary + ".")
         return restored
+
+    def repair_journal(self) -> int:
+        """Drop malformed lines, keep the rest. Returns the count dropped."""
+        if not self.config.history_path.is_file():
+            return 0
+        raw = self.config.history_path.read_text(encoding="utf-8").splitlines()
+        kept = [ln for ln in raw if _parse_record(ln) is not None]
+        dropped = len(raw) - len(kept)
+        if dropped:
+            atomic_write_text(self.config.history_path,
+                              "".join(ln + "\n" for ln in kept))
+        return dropped
