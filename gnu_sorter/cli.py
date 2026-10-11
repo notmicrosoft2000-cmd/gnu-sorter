@@ -11,7 +11,7 @@ from pathlib import Path
 from . import __version__
 from .config import (Config, DEFAULT_RULES, atomic_write_text,
                      normalize_rules, safe_category_name)
-from .engine import Sorter, expand, fmt
+from .engine import Sorter, expand, fmt, parse_size
 from . import service
 
 
@@ -59,9 +59,20 @@ def build_parser() -> argparse.ArgumentParser:
                            "or glob, e.g. 'screenshot*')")
     mode.add_argument("--journal-batch", metavar="ID",
                       help="only entries from one sweep (batch id)")
+    mode.add_argument("--journal-ext", metavar="EXT",
+                      help="only files with this source extension "
+                           "(comma list allowed, e.g. pdf,png)")
+    mode.add_argument("--journal-min-size", metavar="SIZE",
+                      help="only entries at least this big (e.g. 500K, 2M)")
+    mode.add_argument("--journal-max-size", metavar="SIZE",
+                      help="only entries at most this big (e.g. 500K, 2M)")
     mode.add_argument("--restore-into", metavar="PATH",
                       help="restore into this folder instead of each file's "
                            "original location")
+    mode.add_argument("--on-conflict", choices=["rename", "overwrite", "skip"],
+                      default="rename",
+                      help="when the original path is occupied: rename "
+                           "(default), overwrite or skip")
     mode.add_argument("--backup-journal", action="store_true",
                       help="copy the journal to history.log.bak and exit")
     mode.add_argument("--export-journal", metavar="FILE",
@@ -347,6 +358,14 @@ def main(argv: list[str] | None = None) -> int:
 
     sorter = Sorter(cfg)
     dry = args.dry_run or bool(sorter.settings.get("dry_run_default"))
+    try:
+        min_size = (parse_size(args.journal_min_size)
+                    if args.journal_min_size else None)
+        max_size = (parse_size(args.journal_max_size)
+                    if args.journal_max_size else None)
+    except ValueError as exc:
+        print(f"!! bad size: {exc}", file=sys.stderr)
+        return 2
 
     roots = [expand(r) for r in args.root] if args.root else None
 
@@ -361,7 +380,8 @@ def main(argv: list[str] | None = None) -> int:
             args.export_journal, limit=args.limit, since=args.since,
             before=args.before, folder=args.journal_folder,
             rule=args.journal_rule, name=args.journal_name,
-            batch=args.journal_batch)
+            batch=args.journal_batch, ext=args.journal_ext,
+            min_size=min_size, max_size=max_size)
         print(f"exported {n} journal entr(ies) → {args.export_journal}")
         return 0
 
@@ -377,7 +397,8 @@ def main(argv: list[str] | None = None) -> int:
         rows = sorter.records(limit=args.limit, since=args.since,
                               before=args.before, folder=args.journal_folder,
                               rule=args.journal_rule, name=args.journal_name,
-                              batch=args.journal_batch)
+                              batch=args.journal_batch, ext=args.journal_ext,
+                              min_size=min_size, max_size=max_size)
         if not rows:
             print("journal is empty.")
         else:
@@ -391,15 +412,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.undo or args.restore:
         if args.restore and not (args.journal_folder or args.journal_rule
                                  or args.journal_name or args.journal_batch
-                                 or args.since or args.before):
+                                 or args.journal_ext or min_size
+                                 or max_size or args.since or args.before):
             print("--restore needs a selector: --journal-folder, "
-                  "--journal-rule, --journal-name, --journal-batch, --since "
-                  "or --before", file=sys.stderr)
+                  "--journal-rule, --journal-name, --journal-batch, "
+                  "--journal-ext, --journal-min-size, --journal-max-size, "
+                  "--since or --before", file=sys.stderr)
             return 2
         sorter.undo(dry_run=dry, limit=args.undo_last, since=args.since,
                     before=args.before, folder=args.journal_folder,
                     rule=args.journal_rule, name=args.journal_name,
-                    batch=args.journal_batch, target=args.restore_into)
+                    batch=args.journal_batch, target=args.restore_into,
+                    ext=args.journal_ext, min_size=min_size,
+                    max_size=max_size, on_conflict=args.on_conflict)
         return 0
 
     if args.watch:

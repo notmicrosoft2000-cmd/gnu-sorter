@@ -316,21 +316,81 @@ class JournalTests(unittest.TestCase):
             self.assertTrue((target / "b.txt").exists())
             self.assertEqual(sorter.records(), [])
 
-    def test_rotation_trims(self):
+    def test_selector_ext_and_size(self):
         with tempfile.TemporaryDirectory() as td:
             sorter, _cfg = _sorter(Path(td))
+            root = Path(td) / "In"
+            root.mkdir()
+            t = time.time() - 3600
+            small = root / "note.txt"
+            small.write_bytes(b"x" * 10)
+            os.utime(small, (t, t))
+            big = root / "photo.png"
+            big.write_bytes(b"y" * 5000)
+            os.utime(big, (t, t))
+            _old(root / "doc.pdf")                     # 300 bytes
+            sorter.sweep(roots=[root])
+
+            self.assertEqual([r["src"] for r in sorter.records(ext="png")],
+                             [str(root / "photo.png")])
+            self.assertEqual(len(sorter.records(ext="txt,pdf")), 2)
+            self.assertEqual(len(sorter.records(ext=".PNG")), 1)   # dot + case
+            self.assertEqual(len(sorter.records(min_size=1000)), 1)
+            self.assertEqual(len(sorter.records(max_size=100)), 1)
+            self.assertEqual(len(sorter.records(min_size=100, max_size=1000)), 1)
+
+    def test_parse_size_units(self):
+        self.assertEqual(engine.parse_size("500"), 500)
+        self.assertEqual(engine.parse_size("2k"), 2048)
+        self.assertEqual(engine.parse_size("1.5M"), 1_572_864)
+        self.assertEqual(engine.parse_size("1 gb"), 1024 ** 3)
+
+    def test_restore_on_conflict_overwrite(self):
+        with tempfile.TemporaryDirectory() as td:
+            sorter, _cfg = _sorter(Path(td))
+            root = Path(td) / "In"
+            root.mkdir()
+            _old(root / "a.pdf")
+            _old(root / "b.pdf")
+            sorter.sweep(roots=[root])
+            (root / "a.pdf").write_bytes(b"replacement")   # occupy the old name
+            n = sorter.undo(rule="Documents", on_conflict="overwrite")
+            self.assertEqual(n, 2)
+            self.assertEqual((root / "a.pdf").read_bytes()[:3], b"PDF")
+            self.assertEqual((root / "b.pdf").read_bytes()[:3], b"PDF")
+            self.assertEqual(sorter.records(), [])
+
+    def test_restore_on_conflict_skip(self):
+        with tempfile.TemporaryDirectory() as td:
+            sorter, _cfg = _sorter(Path(td))
+            root = Path(td) / "In"
+            root.mkdir()
+            _old(root / "a.pdf")
+            _old(root / "b.pdf")
+            sorter.sweep(roots=[root])
+            (root / "a.pdf").write_bytes(b"replacement")
+            n = sorter.undo(rule="Documents", on_conflict="skip")
+            # Only b.pdf comes back; a.pdf stays put and stays in the journal.
+            self.assertEqual(n, 1)
+            self.assertEqual((root / "a.pdf").read_bytes(), b"replacement")
+            self.assertTrue((root / "b.pdf").exists())
+            remaining = sorter.records()
+            self.assertEqual(len(remaining), 1)
+            self.assertEqual(Path(remaining[0]["src"]).name, "a.pdf")
+
+    def test_rotation_trims(self):
+        with tempfile.TemporaryDirectory() as td:
+            sorter, cfg = _sorter(Path(td))
             tmp = Path(td)
-            orig_b, orig_k = engine._ROTATE_BYTES, engine._ROTATE_KEEP
-            engine._ROTATE_BYTES, engine._ROTATE_KEEP = 200, 5
-            try:
-                for i in range(8):
-                    sorter._journal(tmp / f"f{i}.txt", tmp / f"d{i}.txt",
-                                    "X", str(tmp), "batch")
-                rows = sorter.records()
-                self.assertLessEqual(len(rows), 7)
-                self.assertEqual(rows[-1]["src"], str(tmp / "f7.txt"))
-            finally:
-                engine._ROTATE_BYTES, engine._ROTATE_KEEP = orig_b, orig_k
+            # Retention is configurable via settings (Phase 4.3).
+            cfg.save_settings({"history_max_bytes": 200,
+                               "history_max_entries": 5})
+            for i in range(8):
+                sorter._journal(tmp / f"f{i}.txt", tmp / f"d{i}.txt",
+                                "X", str(tmp), "batch")
+            rows = sorter.records()
+            self.assertLessEqual(len(rows), 7)
+            self.assertEqual(rows[-1]["src"], str(tmp / "f7.txt"))
 
 
 if __name__ == "__main__":

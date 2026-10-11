@@ -106,13 +106,17 @@ gnu-sorter --sweep
 gnu-sorter --watch
 gnu-sorter --undo-last 1
 
-# Search the journal: by rule, folder, name (substring or glob) or date range
+# Search the journal: by rule, folder, name (substring or glob), file type,
+# size or date range
 gnu-sorter --journal --journal-rule Photos --journal-name 'screenshot*'
 gnu-sorter --journal --since 7d --journal-folder ~/Downloads/Documents
+gnu-sorter --journal --journal-ext png,jpg --journal-min-size 1M
 
-# Restore: preview first (--dry-run), then commit into the original folders
+# Restore: preview first (--dry-run), then commit into the original folders.
+# --on-conflict controls occupied names: rename (default), overwrite or skip.
 gnu-sorter --restore --journal-name '*.jpg' --dry-run
 gnu-sorter --restore --journal-rule Photos --restore-into ~/Restored
+gnu-sorter --restore --journal-ext pdf --on-conflict overwrite
 
 # Back up / export / import the journal
 gnu-sorter --backup-journal

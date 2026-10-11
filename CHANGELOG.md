@@ -20,6 +20,15 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
 - **Journal search / index / backup**: in-memory index (by rule, folder, batch,
   time), filename/glob + date-range search, restore **preview**, backup and
   journal/rules **export & import**.
+- **Journal filters**: `--journal-ext` (comma list) and `--journal-min-size` /
+  `--journal-max-size` (with `K`/`M`/`G` suffixes), plus a file-type filter in
+  the Activity view.
+- **Restore conflict strategies**: `--on-conflict rename|overwrite|skip`,
+  also selectable in the Restore dialog.
+- **Configurable history retention**: `history_max_entries` and
+  `history_max_bytes` (Settings → History), used when the journal trims itself.
+- `tools/release.py`, `RELEASING.md` and a CHANGELOG for a predictable
+  `indev → alpha → beta → rc → release` cycle.
 
 ### Changed
 - New per-rule **`match_mode`** (`any` / `all`, default `any`) with a
@@ -28,6 +37,12 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
   comma-separated string; grouped fields; live plain-English preview.
 - Version is now single-sourced from `gnu_sorter.__version__` (read dynamically
   by `pyproject.toml`).
+
+### Fixed
+- The system tray now finds a committed `data/icons/gnu-sorter.png`; the
+  installer ships a committed hicolor PNG ladder (no rsvg/inkscape needed) and
+  reuses the single-source `data/gnu-sorter.desktop`.
+
 
 ## [2.5.0] - 2026-10-11
 

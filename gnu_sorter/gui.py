@@ -915,6 +915,15 @@ class MainWindow(Adw.ApplicationWindow):
         self.activity_rule_filter.connect(
             "notify::selected", lambda *_a: self.refresh_activity())
         bar.append(self.activity_rule_filter)
+        self.activity_ext_filter = Gtk.DropDown.new_from_strings(["All types"])
+        self.activity_ext_filter.set_tooltip_text("Filter by file type")
+        try:
+            self.activity_ext_filter.set_enable_search(True)
+        except AttributeError:
+            pass
+        self.activity_ext_filter.connect(
+            "notify::selected", lambda *_a: self.refresh_activity())
+        bar.append(self.activity_ext_filter)
         self.activity_summary = _dim("")
         self.activity_summary.set_hexpand(True)
         bar.append(self.activity_summary)
@@ -931,6 +940,14 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _activity_rule(self) -> str | None:
         dd = getattr(self, "activity_rule_filter", None)
+        if dd is None or dd.get_selected() == 0:
+            return None
+        item = dd.get_selected_item()
+        name = item.get_string() if item is not None else ""
+        return name or None
+
+    def _activity_ext(self) -> str | None:
+        dd = getattr(self, "activity_ext_filter", None)
         if dd is None or dd.get_selected() == 0:
             return None
         item = dd.get_selected_item()
@@ -956,8 +973,23 @@ class MainWindow(Adw.ApplicationWindow):
                     dd.set_model(Gtk.StringList.new(items))
                     if wanted in items:
                         dd.set_selected(items.index(wanted))
+            ed = getattr(self, "activity_ext_filter", None)
+            if ed is not None:
+                wanted_ext = self._activity_ext()
+                exts = sorted({Path(rec["src"]).suffix.lstrip(".").lower()
+                               for _line, rec in index.entries
+                               if Path(rec["src"]).suffix})
+                items = ["All types"] + exts
+                model = ed.get_model()
+                current = ([model.get_string(i) for i in range(model.get_n_items())]
+                           if model is not None else [])
+                if current != items:
+                    ed.set_model(Gtk.StringList.new(items))
+                    if wanted_ext in items:
+                        ed.set_selected(items.index(wanted_ext))
             rows = self.sorter.records(limit=200, name=self._activity_query(),
-                                       rule=self._activity_rule())
+                                       rule=self._activity_rule(),
+                                       ext=self._activity_ext())
             self.activity_list.remove_all()
             if not rows:
                 self.activity_list.append(Adw.ActionRow(title="Nothing sorted yet"))
@@ -986,11 +1018,12 @@ class MainWindow(Adw.ApplicationWindow):
         self.refresh_activity()
 
     def on_restore(self, _btn):
-        name, rule = self._activity_query(), self._activity_rule()
-        if not (name or rule):
-            self.toast("Search for a file or pick a rule, then Restore")
+        name, rule, ext = (self._activity_query(), self._activity_rule(),
+                           self._activity_ext())
+        if not (name or rule or ext):
+            self.toast("Filter by a file, rule or type, then Restore")
             return
-        RestoreDialog(self, name=name, rule=rule).open()
+        RestoreDialog(self, name=name, rule=rule, ext=ext).open()
 
     # ----------------------------------------------------------- settings ---
     def _page_settings(self) -> Gtk.Widget:
@@ -1053,6 +1086,27 @@ class MainWindow(Adw.ApplicationWindow):
                          "cautious_downloads", bool)
         extras.add(cautious)
         page.add(extras)
+
+        history = Adw.PreferencesGroup(
+            title="History",
+            description="The move journal trims itself once it grows past "
+                        "these limits (a full copy is saved as history.log.bak).")
+        keep = Adw.SpinRow.new_with_range(100, 100000, 100)
+        keep.set_title("Entries to keep")
+        keep.set_subtitle("Most recent moves kept when the journal is trimmed")
+        keep.set_value(float(s.get("history_max_entries", 2500)))
+        keep.connect("notify::value", self._set_setting,
+                     "history_max_entries", int)
+        history.add(keep)
+
+        size = Adw.SpinRow.new_with_range(1, 500, 1)
+        size.set_title("Trim after (MB)")
+        size.set_subtitle("Maximum journal size before old entries are dropped")
+        size.set_value(float(s.get("history_max_bytes", 1_000_000)) / 1_000_000)
+        size.connect("notify::value", self._set_setting,
+                     "history_max_bytes", lambda v: int(v * 1_000_000))
+        history.add(size)
+        page.add(history)
 
         startup = Adw.PreferencesGroup(title="Startup")
         self.start_row = Adw.SwitchRow(title="Start on login",
@@ -2469,22 +2523,30 @@ class RestoreDialog:
 
     Shows exactly what :meth:`Sorter.undo` would do — sizes, collisions and
     entries that can no longer be restored — before the user commits, so the
-    dangerous action always has a dry run in front of it.
+    dangerous action always has a dry run in front of it. The conflict
+    strategy (rename / overwrite / skip) re-plans live.
     """
 
+    _CONFLICTS = [("Rename on clash", "rename"),
+                  ("Overwrite", "overwrite"),
+                  ("Skip occupied", "skip")]
+    _HINT = {
+        "rename": "Occupied names get a “(1)” suffix — nothing is overwritten.",
+        "overwrite": "Occupied names are replaced.",
+        "skip": "Occupied names are left alone (entries stay in the journal).",
+    }
+
     def __init__(self, window: MainWindow, name: str | None = None,
-                 rule: str | None = None):
+                 rule: str | None = None, ext: str | None = None,
+                 min_size: int | None = None, max_size: int | None = None):
         self.win = window
         self.sorter = window.sorter
         self.name = name
         self.rule = rule
-
-        loaded = self.sorter._read_journal()
-        to_undo = self.sorter._select(loaded, None, None, None, None, rule,
-                                      name, None)
-        self.plan = self.sorter.restore_plan(to_undo)
-        actionable = [p for p in self.plan
-                      if p["status"] in ("restore", "collision")]
+        self.ext = ext
+        self.min_size = min_size
+        self.max_size = max_size
+        self.on_conflict = "rename"
 
         self.dialog = Adw.Dialog(title="Restore files")
         self.dialog.set_content_width(760)
@@ -2498,37 +2560,13 @@ class RestoreDialog:
         box.set_margin_bottom(8)
 
         box.append(_heading("Restore preview"))
-        scope = []
-        if name:
-            scope.append(f"name like “{name}”")
-        if rule:
-            scope.append(f"rule “{rule}”")
-        box.append(_dim(f"{len(actionable)} file(s) can be restored"
-                        + (f"  ·  {', '.join(scope)}" if scope else "")))
-        box.append(_dim("Files return to their original folders. Occupied names "
-                        "get a “(1)” suffix — nothing is overwritten."))
+        self.scope_label = _dim("")
+        box.append(self.scope_label)
+        self.hint_label = _dim("")
+        box.append(self.hint_label)
 
-        listing = _listbox()
-        for item in self.plan:
-            src_p, dest_p = item["src"], item["dest"]
-            status = item["status"]
-            if status == "missing":
-                note = f"missing from {dest_p.parent.name}/"
-            elif status == "already":
-                note = "already back in place"
-            else:
-                parts = [f"from {dest_p.parent.name}/"]
-                if status == "collision":
-                    parts.append(f"name taken → restore as {item['target'].name}")
-                if item["changed"]:
-                    parts.append("size changed")
-                note = " · ".join(parts)
-            row = Adw.ActionRow(title=src_p.name, subtitle=note)
-            size = item.get("size")
-            if isinstance(size, int):
-                row.add_suffix(Gtk.Label(label=_human_size(size)))
-            listing.append(row)
-        box.append(_scroll(listing))
+        self.listing = _listbox()
+        box.append(_scroll(self.listing))
 
         outer.append(box)
         outer.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
@@ -2538,24 +2576,85 @@ class RestoreDialog:
             setter(14)
         cancel = Gtk.Button(label="Cancel")
         cancel.connect("clicked", lambda _b: self.dialog.close())
-        self.restore = Gtk.Button(label=f"Restore {len(actionable)} file(s)")
-        self.restore.add_css_class("suggested-action")
-        self.restore.set_sensitive(bool(actionable))
-        self.restore.connect("clicked", self._restore)
-        footer.append(cancel)
+        self.conflict = Gtk.DropDown.new_from_strings(
+            [label for label, _value in self._CONFLICTS])
+        self.conflict.set_tooltip_text(
+            "What to do when the original name is taken")
+        self.conflict.connect("notify::selected",
+                              lambda *_a: self._on_conflict())
+        footer.append(self.conflict)
         spacer = Gtk.Box()
         spacer.set_hexpand(True)
         footer.append(spacer)
+        self.restore = Gtk.Button(label="Restore")
+        self.restore.add_css_class("suggested-action")
+        self.restore.connect("clicked", self._restore)
+        footer.append(cancel)
         footer.append(self.restore)
         outer.append(footer)
 
         self.dialog.set_child(outer)
+        self._build_plan()
+
+    def _on_conflict(self):
+        self.on_conflict = self._CONFLICTS[self.conflict.get_selected()][1]
+        self._build_plan()
+
+    def _build_plan(self):
+        loaded = self.sorter._read_journal()
+        to_undo = self.sorter._select(
+            loaded, rule=self.rule, name=self.name, ext=self.ext,
+            min_size=self.min_size, max_size=self.max_size)
+        self.plan = self.sorter.restore_plan(to_undo, on_conflict=self.on_conflict)
+        actionable = [p for p in self.plan
+                      if p["status"] in ("restore", "collision", "overwrite")]
+
+        scope = []
+        if self.name:
+            scope.append(f"name like “{self.name}”")
+        if self.rule:
+            scope.append(f"rule “{self.rule}”")
+        if self.ext:
+            scope.append(f"type {self.ext}")
+        self.scope_label.set_text(
+            f"{len(actionable)} file(s) can be restored"
+            + (f"  ·  {', '.join(scope)}" if scope else ""))
+        self.hint_label.set_text(self._HINT[self.on_conflict])
+        self.restore.set_label(f"Restore {len(actionable)} file(s)")
+        self.restore.set_sensitive(bool(actionable))
+
+        self.listing.remove_all()
+        for item in self.plan:
+            src_p, dest_p = item["src"], item["dest"]
+            status = item["status"]
+            if status == "missing":
+                note = f"missing from {dest_p.parent.name}/"
+            elif status == "already":
+                note = "already back in place"
+            elif status == "skip":
+                note = f"kept — {item['base'].name} is occupied"
+            else:
+                parts = [f"from {dest_p.parent.name}/"]
+                if status == "collision":
+                    parts.append(f"name taken → restore as {item['target'].name}")
+                elif status == "overwrite":
+                    parts.append(f"replaces {item['base'].name}")
+                if item["changed"]:
+                    parts.append("size changed")
+                note = " · ".join(parts)
+            row = Adw.ActionRow(title=src_p.name, subtitle=note)
+            size = item.get("size")
+            if isinstance(size, int):
+                row.add_suffix(Gtk.Label(label=_human_size(size)))
+            self.listing.append(row)
 
     def open(self):
         self.dialog.present(self.win)
 
     def _restore(self, _btn):
-        n = self.sorter.undo(name=self.name, rule=self.rule)
+        n = self.sorter.undo(name=self.name, rule=self.rule, ext=self.ext,
+                             min_size=self.min_size, max_size=self.max_size,
+                             on_conflict=self.on_conflict)
         self.dialog.close()
         self.win.toast(f"Restored {n} file(s)")
         self.win.refresh_activity()

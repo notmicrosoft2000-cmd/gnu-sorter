@@ -207,6 +207,40 @@ def _name_matches(pattern: str, filename: str) -> bool:
     return p in filename.lower()
 
 
+def _norm_exts(ext) -> set[str]:
+    """'pdf, .PNG' -> {'pdf', 'png'} (leading dots and case ignored)."""
+    out: set[str] = set()
+    for part in str(ext).replace(",", " ").split():
+        cleaned = part.strip().lstrip(".").lower()
+        if cleaned:
+            out.add(cleaned)
+    return out
+
+
+def _rec_size(rec: dict):
+    """The record's byte size, or None when unknown."""
+    value = rec.get("size")
+    return value if isinstance(value, int) else None
+
+
+def parse_size(text) -> int:
+    """'500', '2k', '3M', '1G' (also '2kb', '1 mb') -> bytes.
+
+    Shared by the CLI's size selectors and config validation.
+    """
+    s = str(text).strip().lower().replace(" ", "")
+    if not s:
+        raise ValueError("empty size")
+    mult = 1
+    for suffix, factor in (("kb", 1024), ("mb", 1024 ** 2), ("gb", 1024 ** 3),
+                           ("k", 1024), ("m", 1024 ** 2), ("g", 1024 ** 3),
+                           ("b", 1)):
+        if s.endswith(suffix):
+            s, mult = s[:-len(suffix)], factor
+            break
+    return int(float(s) * mult)
+
+
 def read_journal(path: Path) -> list[tuple[str, dict]]:
     """Read a journal file into ``(raw_line, record)`` pairs, dropping
     malformed lines. Missing or unreadable files yield an empty list."""
@@ -261,12 +295,15 @@ class JournalIndex:
         return {rule: len(rows) for rule, rows in self.by_rule.items()}
 
     def select(self, limit=None, since=None, before=None, folder=None,
-               rule=None, batch=None, name=None) -> list[tuple[str, dict]]:
+               rule=None, batch=None, name=None, ext=None,
+               min_size=None, max_size=None) -> list[tuple[str, dict]]:
         """Filter to ``(raw_line, record)`` pairs in chronological order.
 
         ``since``/``before`` bound the time window, ``folder`` matches the
         destination folder, ``rule``/``batch`` match a rule name or a sweep id,
-        and ``name`` is a case-insensitive substring or glob on the file name.
+        ``name`` is a case-insensitive substring or glob on the file name,
+        ``ext`` matches the source extension (comma list allowed), and
+        ``min_size``/``max_size`` bound the recorded byte size.
         ``limit`` keeps the most recent N (an empty/zero limit yields nothing).
         """
         if limit is not None and limit <= 0:
@@ -293,6 +330,17 @@ class JournalIndex:
         if name:
             rows = [x for x in rows
                     if _name_matches(name, Path(x[1]["src"]).name)]
+        if ext:
+            wanted_ext = _norm_exts(ext)
+            rows = [x for x in rows
+                    if Path(x[1]["src"]).suffix.lstrip(".").lower()
+                    in wanted_ext]
+        if min_size is not None:
+            rows = [x for x in rows
+                    if (sz := _rec_size(x[1])) is not None and sz >= min_size]
+        if max_size is not None:
+            rows = [x for x in rows
+                    if (sz := _rec_size(x[1])) is not None and sz <= max_size]
         if limit:
             rows = rows[-limit:]
         return rows
@@ -550,15 +598,28 @@ class Sorter:
         with self.config.history_path.open("a", encoding="utf-8") as fh:
             fh.write(_journal_line_v2(rec))
         try:
-            if self.config.history_path.stat().st_size > _ROTATE_BYTES:
-                self._rotate_journal()
+            keep, max_bytes = self._rotation_limits()
+            if self.config.history_path.stat().st_size > max_bytes:
+                self._rotate_journal(keep)
         except OSError:
             pass
 
-    def _rotate_journal(self) -> None:
+    def _rotation_limits(self) -> tuple[int, int]:
+        """``(keep_entries, max_bytes)`` from settings, with safe fallbacks."""
+        settings = self.config.load_settings()
+        try:
+            keep = int(settings.get("history_max_entries", _ROTATE_KEEP))
+            max_bytes = int(settings.get("history_max_bytes", _ROTATE_BYTES))
+        except (TypeError, ValueError):
+            keep, max_bytes = _ROTATE_KEEP, _ROTATE_BYTES
+        return max(keep, 1), max(max_bytes, 1)
+
+    def _rotate_journal(self, keep: int | None = None) -> None:
+        if keep is None:
+            keep = self._rotation_limits()[0]
         self.backup_journal()           # preserve the full log before trimming
         loaded = self._read_journal()
-        kept = loaded[-_ROTATE_KEEP:]
+        kept = loaded[-keep:]
         atomic_write_text(self.config.history_path,
                           "".join(line + "\n" for line, _rec in kept))
 
@@ -692,22 +753,27 @@ class Sorter:
         return JournalIndex(self._read_journal())
 
     def _select(self, loaded: list, limit=None, since=None, before=None,
-                folder=None, rule=None, name=None, batch=None) -> list:
+                folder=None, rule=None, name=None, batch=None, ext=None,
+                min_size=None, max_size=None) -> list:
         return JournalIndex(loaded).select(limit, since, before, folder, rule,
-                                           batch, name)
+                                           batch, name, ext, min_size, max_size)
 
     def records(self, limit: int | None = None, since: str | None = None,
                 before: str | None = None, folder: str | None = None,
                 rule: str | None = None, name: str | None = None,
-                batch: str | None = None) -> list[dict]:
+                batch: str | None = None, ext: str | None = None,
+                min_size: int | None = None,
+                max_size: int | None = None) -> list[dict]:
         """Journal entries (chronological order) as rich dicts, with selectors.
 
         ``name`` is a case-insensitive substring or glob on the file name;
+        ``ext`` matches the source extension (comma list allowed);
+        ``min_size``/``max_size`` bound the recorded byte size;
         ``batch`` selects one sweep's moves.
         """
         return [rec for _line, rec in
                 self._select(self._read_journal(), limit, since, before,
-                             folder, rule, name, batch)]
+                             folder, rule, name, batch, ext, min_size, max_size)]
 
     def rule_counts(self) -> dict[str, int]:
         """How many live journal entries each rule name has sorted.
@@ -723,15 +789,21 @@ class Sorter:
                 for r in self.records(limit=limit)]
 
     def restore_plan(self, to_undo: list,
-                     target: str | None = None) -> list[dict]:
+                     target: str | None = None,
+                     on_conflict: str = "rename") -> list[dict]:
         """Describe what ``undo`` would do, without touching the disk.
 
         Each item carries ``raw``/``rec`` plus: ``src``, ``dest``, ``size``,
         ``base`` (the intended original path or its name inside ``target``),
         ``target`` (where the file would actually land), ``status`` (one of
-        ``restore``, ``collision``, ``already`` or ``missing``), ``changed``
-        (size drifted since sorting) and a human ``note``.
+        ``restore``, ``collision``, ``overwrite``, ``skip``, ``already`` or
+        ``missing``), ``changed`` (size drifted since sorting) and a human
+        ``note``. ``on_conflict`` decides what happens when the original path is
+        occupied: ``rename`` (default, ``name (1).ext``), ``overwrite`` (replace
+        it) or ``skip`` (leave it, drop nothing? no — keep the entry).
         """
+        if on_conflict not in ("rename", "overwrite", "skip"):
+            raise ValueError(f"bad on_conflict {on_conflict!r}")
         plan: list[dict] = []
         taken: set = set()
         for raw, rec in reversed(to_undo):
@@ -752,7 +824,18 @@ class Sorter:
             elif not target and _same_file(rec, base):
                 item["status"] = "already"
                 item["note"] = "already back"
-            else:
+            elif on_conflict == "overwrite":
+                taken.add(base)
+                if base.exists():
+                    item["status"] = "overwrite"
+                    item["note"] = "replacing the file already there"
+            elif on_conflict == "skip":
+                if base.exists():
+                    item["status"] = "skip"
+                    item["note"] = "occupied — skipped"
+                else:
+                    taken.add(base)
+            else:                                   # rename (default)
                 resolved = plan_target(base, taken)
                 taken.add(resolved)
                 item["target"] = resolved
@@ -776,10 +859,15 @@ class Sorter:
                 print(f"  skipped      {fmt(dest_p)}  (no longer there)")
             elif status == "already":
                 print(f"  already back {fmt(target_p)}")
+            elif status == "skip":
+                print(f"  skipped      {fmt(dest_p)}  (occupied — left in "
+                      f"place)")
             else:
                 extra = ""
                 if status == "collision":
                     extra = f"  (occupied → {target_p.name})"
+                elif status == "overwrite":
+                    extra = "  (replacing existing)"
                 if item.get("changed"):
                     extra += "  [size changed]"
                 print(f"  {verb} {fmt(dest_p)}  ->  {fmt(target_p)}{size_s}{extra}")
@@ -792,30 +880,35 @@ class Sorter:
              since: str | None = None, before: str | None = None,
              folder: str | None = None, rule: str | None = None,
              name: str | None = None, batch: str | None = None,
-             target: str | None = None) -> int:
+             target: str | None = None, ext: str | None = None,
+             min_size: int | None = None, max_size: int | None = None,
+             on_conflict: str = "rename") -> int:
         """Restore previously sorted files, dropping restored entries from the
         journal so a later undo never replays them.
 
         Selectors: ``limit`` (last N), ``since``/``before`` (time window),
         ``folder`` (entries sorted into this folder), ``rule`` (caught by this
-        rule), ``name`` (filename substring/glob) and ``batch`` (one sweep).
-        ``target`` restores everything into that folder instead of each file's
-        original location. Collision-safe: an occupied target becomes
-        "name (1).ext" unless the file already there matches the journal (size
-        + mtime) — then it is treated as already restored and dropped.
+        rule), ``name`` (filename substring/glob), ``batch`` (one sweep),
+        ``ext`` (source extension, comma list) and ``min_size``/``max_size``
+        (recorded byte size). ``target`` restores everything into that folder
+        instead of each file's original location. ``on_conflict`` is
+        ``rename`` (default; an occupied target becomes "name (1).ext"),
+        ``overwrite`` (replace it) or ``skip`` (leave the file in place and keep
+        the journal entry). A file already back where it started (size + mtime
+        match) is dropped as already restored.
         """
         loaded = self._read_journal()
         if not loaded:
             print("nothing to undo.")
             return 0
         to_undo = self._select(loaded, limit, since, before, folder, rule,
-                               name, batch)
+                               name, batch, ext, min_size, max_size)
         if not to_undo:
             print("nothing matches those selectors.")
             return 0
         sel_ids = {id(x) for x in to_undo}
         rest = [x for x in loaded if id(x) not in sel_ids]
-        plan = self.restore_plan(to_undo, target=target)
+        plan = self.restore_plan(to_undo, target=target, on_conflict=on_conflict)
         if dry_run:
             return self._report_plan(plan, preview=True)
         restored = skipped = changed = 0
@@ -831,6 +924,12 @@ class Sorter:
                 print(f"  already back {fmt(target_p)}")
                 skipped += 1
                 continue
+            if item["status"] == "skip":
+                print(f"  skipped      {fmt(dest_p)}  (occupied — left in "
+                      f"place)")
+                rest.append((item["raw"], rec))
+                skipped += 1
+                continue
             if item["changed"]:
                 print(f"  * {fmt(dest_p)} changed size since sorting; "
                       f"restoring anyway")
@@ -838,8 +937,12 @@ class Sorter:
             if item["status"] == "collision":
                 print(f"  {fmt(item['base'])} occupied; restoring to "
                       f"{fmt(target_p)}")
+            elif item["status"] == "overwrite":
+                print(f"  {fmt(item['base'])} occupied; replacing it")
             try:
                 target_p.parent.mkdir(parents=True, exist_ok=True)
+                if item["status"] == "overwrite" and target_p.exists():
+                    target_p.unlink()
                 shutil.move(str(dest_p), str(target_p))
             except OSError as exc:
                 print(f"!! undo failed {fmt(dest_p)} -> {fmt(target_p)}: {exc}",

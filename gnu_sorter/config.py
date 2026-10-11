@@ -91,6 +91,10 @@ DEFAULT_SETTINGS = {
     "watch_interval": 2,
     "notifications": True,
     "dry_run_default": False,
+    # Journal retention: trim once the log passes `history_max_bytes`, keeping
+    # the most recent `history_max_entries` (a full copy is saved as .bak).
+    "history_max_entries": 2500,
+    "history_max_bytes": 1_000_000,
 }
 
 # Quick rule-sets offered in the GUI ("Presets" menu).

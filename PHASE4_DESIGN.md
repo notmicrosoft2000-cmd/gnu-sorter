@@ -179,6 +179,11 @@ SemVer 2.0.0 with pre-release identifiers, one channel each:
    the single-source `data/gnu-sorter.desktop`, removed the rsvg/inkscape
    requirement, and added `tests/test_assets.py`. Packaging export lands in 4.5.
 3. **4.3 Journal** (index, filters, restore, retention).
+   — **Linux DONE**: new `ext` / `min_size` / `max_size` selectors (CLI
+   `--journal-ext`, `--journal-min-size`, `--journal-max-size`, with `K/M/G`
+   parsing), restore `--on-conflict rename|overwrite|skip`, the same controls
+   in the Activity filter bar + Restore dialog, and configurable retention
+   (`history_max_entries` / `history_max_bytes`, now in Settings).
 4. **4.4 Customization & settings.**
 5. **4.6 Updates v2** (packaging-aware, channel-aware, opt-out).  ← after 4.5 so
    the install-type detection targets real formats.
