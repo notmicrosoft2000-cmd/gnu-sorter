@@ -166,7 +166,37 @@ the Windows engine ignores those keys entirely.
 
 ---
 
-## 4. Design & mascot — "bring the GUI to life"
+## 4. Ship it — journal, customization, packaging & release cycle
+
+> Repurposed from "Design & mascot". Full design + sub-slices:
+> [`PHASE4_DESIGN.md`](PHASE4_DESIGN.md).
+
+- **Branding:** user-facing name **Funnel**; codename/slug **`gnu-sorter`**
+  stays for paths, CLI, packages and repos. One version source, a CHANGELOG,
+  and no stale "GNU Sorter"/v2.0 strings.
+- **Icons that ship:** one lime "Funnel" master SVG → PNG ladder + multi-frame
+  `.ico`; Linux bundles it in a GResource (works without `install.sh`);
+  Windows keeps the embedded exe icon, made robust for single-file publish.
+- **Better journal:** persistent index, extension/size/status/date filters,
+  saved searches, batch grouping, selectable + conflict-aware restore, CSV/JSON
+  export/import, configurable retention.
+- **Customization:** theme (system/light/dark, lime accent), per-rule
+  `icon`/`color`, category icons, real settings.
+- **Updates v2:** packaging-aware (Flatpak → defer to `flatpak update`;
+  AppImage → replace the file; script install → current updater), channel-aware,
+  with an opt-out.
+- **Packaging:** **Flatpak + AppImage** on Linux; the self-contained `.exe`
+  stays on Windows.
+- **Release cycle:** `indev → alpha → beta → rc → release`, automated via
+  `tools/release.py`, tag CI and a nightly `indev` workflow (`RELEASING.md`).
+
+### Status
+- Linux: PENDING (lands first). Windows: PENDING (mirrors the shared parts;
+  Flatpak/AppImage are Linux-only).
+
+---
+
+## 5. Design & mascot — "bring the GUI to life" (was Phase 4)
 
 - **Tunneler mascot:** a cute funnel/tunnel creature. SVG for Linux
   (dark/light aware), PNG set (16→256) for Windows icon + in-app.
@@ -180,7 +210,7 @@ the Windows engine ignores those keys entirely.
 - Keep the lime accent; tighten spacing to system rhythm; dark/light aware.
 
 ### Status
-- Linux + Windows: PENDING (Phase 4).
+- Linux + Windows: PENDING (Phase 5).
 
 ---
 
@@ -191,7 +221,8 @@ the Windows engine ignores those keys entirely.
 | 1 | Download detection (two-tier hold) | ✅ engine+cli+gui+tests on main | ✅ pushed `0b9f50f`, MSBuild CI validating |
 | 2 | Journal v2 & restore | ✅ done (`tests/test_journal.py`, CLI selectors, rotation, v2 schema) | ✅ engine+Activity (v2 schema, selectors, collision-safe restore, rotation, repair, sweep-undo) |
 | 3 | Rule wizard (6 steps) + rules page + journal search | ✅ done — rules page + advanced editor + 6-step wizard + journal search/index/backup/restore ([design](PHASE3_DESIGN.md)) | ✅ done — schema/engine parity, rules page, 6-step wizard, journal search/index/backup/restore (MSBuild CI green) |
-| 4 | Design & mascot | ⏳ | ⏳ |
+| 4 | Ship it — journal, customization, packaging, release cycle | ⏳ planned ([design](PHASE4_DESIGN.md)) | ⏳ planned (shared parts; Flatpak/AppImage Linux-only) |
+| 5 | Design & mascot | ⏳ | ⏳ |
 
 Every phase lands on `main` incrementally; releases ride on future tags
 (remaining pending tag: propagate v2.5.x menu-fix + rename via auto-update).
