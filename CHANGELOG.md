@@ -30,6 +30,10 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
 - **Appearance**: pick System / Light / Dark in Settings (remembered across
   launches), and give any rule an optional **accent colour** (rules page shows a
   matching dot).
+- **Flatpak (Linux)**: a GNOME-runtime manifest plus AppStream metadata, built
+  by CI into a self-hosted OSTree repository on GitHub Pages
+  (`…/gnu-sorter/flatpak/`). AppImage was evaluated and dropped in favour of a
+  single, more portable Linux package.
 - `tools/release.py`, `RELEASING.md` and a CHANGELOG for a predictable
   `indev → alpha → beta → rc → release` cycle.
 

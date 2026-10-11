@@ -23,7 +23,7 @@ converts between them.
 
 > **Nightly `indev` builds:** the scheduled workflow that publishes a rolling
 > `indev` prerelease arrives with the packaging work (Phase 4.5), since its
-> value is the AppImage artifact. Until then `main` is the `indev` version but
+> value is the Flatpak OSTree repo. Until then `main` is the `indev` version but
 > no nightly release is published.
 
 ## Branches
@@ -71,7 +71,8 @@ tools/release.py cut release --roll-changelog --commit --tag --push
 - `Release (Linux)` builds and publishes a GitHub Release on any `v*` tag.
 - Tags containing `-alpha`, `-beta`, `-rc` or `-indev` are published as
   **prereleases**; a plain `vX.Y.Z` becomes **latest**.
-- Flatpak / AppImage artifacts (Phase 4.5) attach to the same release.
+- The Flatpak repo is refreshed by the `Flatpak (Linux)` workflow, which runs
+  when the release is published (see `PACKAGING.md`).
 
 ## Checklist
 

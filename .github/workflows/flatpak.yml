@@ -1,0 +1,104 @@
+name: Flatpak (Linux)
+
+# Builds Funnel as a Flatpak and publishes a self-hosted OSTree repo to GitHub
+# Pages at https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/.
+#
+# The site itself is served from docs/ on main, so the flatpak repo is written
+# to docs/flatpak/ and committed back. Trigger it by publishing a GitHub
+# release (see RELEASING.md) or manually from the Actions tab.
+#
+# Optional signing: add a repository GPG key as the secrets
+# FLATPAK_GPG_PRIVATE_KEY (ASCII-armoured) and FLATPAK_GPG_KEY_ID. Without them
+# the repo is published unsigned and clients must add it with
+# `flatpak remote-add --no-gpg-verify ...` (see PACKAGING.md).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  flatpak:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install flatpak + flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder ostree
+          flatpak remote-add --user --if-not-exists flathub \
+            https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive flathub \
+            org.gnome.Sdk//49 org.gnome.Platform//49
+
+      - name: Build the Flatpak into an OSTree repo
+        run: |
+          rm -rf docs/flatpak
+          flatpak-builder --user --repo=docs/flatpak --force-clean \
+            --disable-rofiles-fuse \
+            build-dir packaging/flatpak/io.neptunepc.Funnel.yml
+
+      - name: Sign + update the repo (if a key is configured)
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+          GPG_KEY_ID: ${{ secrets.FLATPAK_GPG_KEY_ID }}
+        run: |
+          if [ -n "${GPG_PRIVATE_KEY:-}" ]; then
+            echo "$GPG_PRIVATE_KEY" | gpg --batch --import -
+            flatpak build-update-repo \
+              --gpg-sign="$GPG_KEY_ID" \
+              --gpg-homedir="$GNUPGHOME" \
+              docs/flatpak
+            echo "signed=yes" >> "$GITHUB_ENV"
+          else
+            flatpak build-update-repo docs/flatpak
+            echo "signed=no" >> "$GITHUB_ENV"
+          fi
+
+      - name: Write .flatpakrepo + landing page
+        env:
+          GPG_KEY_ID: ${{ secrets.FLATPAK_GPG_KEY_ID }}
+        run: |
+          BASE=https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak
+          {
+            echo "[Flatpak Repo]"
+            echo "Title=Funnel"
+            echo "Url=$BASE/"
+            echo "Homepage=https://notmicrosoft2000-cmd.github.io/gnu-sorter/"
+            echo "Comment=Sort any folder automatically with your own rules"
+            echo "Icon=$BASE/gnu-sorter.png"
+            if [ "$signed" = "yes" ]; then
+              echo "GPGKey=$(gpg --export "$GPG_KEY_ID" | base64 -w0)"
+            fi
+          } > docs/flatpak/io.neptunepc.Funnel.flatpakrepo
+          cp data/icons/gnu-sorter.png docs/flatpak/gnu-sorter.png
+          cp data/icons/gnu-sorter.svg docs/flatpak/gnu-sorter.svg
+          cat > docs/flatpak/index.html <<'HTML'
+          <!doctype html><meta charset="utf-8">
+          <title>Funnel — Flatpak repository</title>
+          <body style="font:16px system-ui;max-width:40rem;margin:4rem auto;padding:0 1rem">
+          <h1>Funnel — Flatpak repository</h1>
+          <p>Install with Flatpak:</p>
+          <pre>flatpak remote-add --if-not-exists funnel \
+          https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo
+          flatpak install funnel io.neptunepc.Funnel</pre>
+          <p><a href="https://notmicrosoft2000-cmd.github.io/gnu-sorter/">Back to the site</a></p>
+          </body>
+          HTML
+
+      - name: Commit the repo back to main
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/flatpak
+          if git diff --cached --quiet; then
+            echo "No repository changes to publish."
+          else
+            git commit -m "Publish Flatpak repository ${GITHUB_REF_NAME}"
+            git push
+          fi

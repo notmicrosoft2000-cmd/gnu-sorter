@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 notmicrosoft2000-cmd -->
+<component type="desktop-application">
+  <id>io.neptunepc.Funnel</id>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+
+  <name>Funnel</name>
+  <summary>Sort any folder automatically with your own rules</summary>
+
+  <description>
+    <p>
+      Funnel watches the folders you choose and moves new files into tidy,
+      rule-based subfolders. Point it at Downloads and your screenshots land in
+      Photos, PDFs in Documents and archives in Archives — automatically.
+    </p>
+    <p>
+      Every move is journaled and reversible, rules are editable in a visual
+      editor with a plain-English preview, and the whole thing stays quietly
+      out of your way in the background.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.neptunepc.Funnel.desktop</launchable>
+
+  <url type="homepage">https://notmicrosoft2000-cmd.github.io/gnu-sorter/</url>
+  <url type="bugtracker">https://github.com/notmicrosoft2000-cmd/gnu-sorter/issues</url>
+  <url type="vcs-browser">https://github.com/notmicrosoft2000-cmd/gnu-sorter</url>
+
+  <developer id="io.neptunepc">
+    <name>notmicrosoft2000-cmd</name>
+  </developer>
+
+  <categories>
+    <category>Utility</category>
+    <category>FileTools</category>
+  </categories>
+
+  <keywords>
+    <keyword>sort</keyword>
+    <keyword>organize</keyword>
+    <keyword>folder</keyword>
+    <keyword>downloads</keyword>
+    <keyword>tidy</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="2.5.0" date="2026-10-11">
+      <description>
+        <p>Journal search, restore preview, the rule wizard and the redesigned
+          rules page.</p>
+      </description>
+    </release>
+  </releases>
+</component>

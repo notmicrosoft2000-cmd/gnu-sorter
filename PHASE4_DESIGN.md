@@ -18,8 +18,8 @@
    `install.sh`).
 4. **Check & install updates** — packaging-aware, channel-aware, with an
    opt-out; consistent across Linux and Windows.
-5. **Package it** — Flatpak **and** AppImage on Linux (plus the existing
-   self-contained `.exe` on Windows).
+5. **Package it** — a Flatpak on Linux (plus the existing self-contained `.exe`
+   on Windows).
 6. **A predictable release cycle** — `indev → alpha → beta → rc → release`,
    automated, documented, so every future release follows the same script.
 
@@ -38,7 +38,8 @@
 | Release notes | `generate_release_notes: true` | `generate_release_notes: false` |
 | Changelog | none | none |
 
-`.gitignore` already anticipates `*.flatpak`, `*.AppImage`, `*.snap`.
+`.gitignore` already anticipates `*.flatpak`, `*.AppImage`, `*.snap` (the
+AppImage pattern is now vestigial).
 
 ## 3. Sub-slice plan
 
@@ -59,7 +60,7 @@
   the multi-frame `.ico`.
 - **Linux**: bundle the icon in a **GResource** so the window/tray icon resolves
   without `install.sh`; `set_default_icon_name`; fix the tray's missing PNG
-  candidate; ship the icon in Flatpak/AppImage under the app-id name.
+  candidate; ship the icon in the Flatpak under the app-id name.
 - **Windows**: keep `<ApplicationIcon>` (already embeds into the exe); make the
   runtime taskbar icon robust for `PublishSingleFile`
   (`IncludeAllContentForSelfExtract=true`, or load the `.ico` as an embedded
@@ -94,26 +95,24 @@
 - Windows `Notifications` pref currently does nothing (no toast implementation)
   — either wire it or remove it.
 
-### 4.5 — Packaging: Flatpak + AppImage (+ exe)
-- **Flatpak** — `io.neptunepc.Funnel` (or the Flathub-valid id, see **Q1**):
-  manifest, AppStream `metainfo.xml`, `.desktop` named by app id, icons under
-  the app-id name, GNOME runtime. Built in CI with `flatpak-builder`, exported
-  to a hosted OSTree repo.
-- **AppImage** — recipe via `linuxdeploy` + `linuxdeploy-plugin-gtk` (GTK4 /
-  libadwaita) producing `Funnel-<ver>-x86_64.AppImage`, including desktop file,
-  icon and metainfo.
+### 4.5 — Packaging: Flatpak (+ exe)
+- **Flatpak** — `io.neptunepc.Funnel`: manifest (GNOME runtime, which already
+  ships python3 + PyGObject + GTK4/libadwaita, so the module just copies the
+  source), AppStream `metainfo.xml`, `.desktop` named by app id, icons under the
+  app-id name. Built in CI with `flatpak-builder`, exported to a self-hosted
+  OSTree repo on GitHub Pages (`docs/flatpak/`). **DONE** — see `PACKAGING.md`.
+- **AppImage** — dropped (2026-10-11). A portable GTK/Python AppImage needs a
+  newer host glibc and duplicates the Flatpak stack; Flatpak is the single
+  Linux package.
 - **Windows** — keep the unpackaged self-contained `.exe` (works today); MSIX is
   an optional later add.
-- Keep `install.sh` for devs/CI but present Flatpak/AppImage as the primary
-  downloads.
+- Keep `install.sh` for devs/CI but present the Flatpak as the primary download.
 
 ### 4.6 — Updates v2 (packaging-aware)
 - Detect how the app was installed at runtime:
   - **Flatpak**: `/.flatpak-info` exists → the app is read-only; detect "update
     available" and point the user at `flatpak update` / software center (never
     self-replace inside the sandbox).
-  - **AppImage**: `$APPIMAGE` set → replace the AppImage file
-    (AppImageUpdate/zsync or full-file swap).
   - **script install**: keep the existing `updater.py`/`UpdateService`.
 - **Channel-aware**: only offer a build whose channel matches the user's
   channel (see 4.7); default = `release`. Gate by channel **and** version so the
@@ -132,8 +131,8 @@ SemVer 2.0.0 with pre-release identifiers, one channel each:
 
 | Channel | Version tag | Audience | Source | Artifacts |
 |---|---|---|---|---|
-| **indev** (nightly) | `X.Y.Z-indev.<build>` | developers / the brave | every push to `main` | AppImage + exe, rolling prerelease |
-| **alpha** | `X.Y.Z-alpha.N` | early preview, opt-in | tag on `release/X.Y` | AppImage, exe, flatpak (dev remote) |
+| **indev** (nightly) | `X.Y.Z-indev.<build>` | developers / the brave | every push to `main` | Flatpak (dev remote) + exe, rolling prerelease |
+| **alpha** | `X.Y.Z-alpha.N` | early preview, opt-in | tag on `release/X.Y` | Flatpak (dev remote), exe |
 | **beta** | `X.Y.Z-beta.N` | feature-complete testing, opt-in | tag on `release/X.Y` | all artifacts |
 | **rc** | `X.Y.Z-rc.N` | final soak | tag on `release/X.Y` | all artifacts |
 | **release** | `X.Y.Z` | everyone (default) | tag on `release/X.Y` | all artifacts + Flathub + site |
@@ -159,7 +158,7 @@ SemVer 2.0.0 with pre-release identifiers, one channel each:
   Release: `prerelease: true` for `alpha`/`beta`/`rc`, `latest` only for stable;
   release notes from the CHANGELOG section.
 - **Nightly workflow** (schedule + push to `main`) publishes a rolling
-  `indev` prerelease and uploads the AppImage.
+  `indev` prerelease and refreshes the Flatpak dev remote.
 - **Cadence**: one stable per phase, with as many `alpha`/`beta`/`rc` cuts as
   the phase needs. Junior rule: never tag stable while `ci.yml` is red.
 
@@ -192,11 +191,11 @@ SemVer 2.0.0 with pre-release identifiers, one channel each:
    `normalize_rule`.
 5. **4.6 Updates v2** (packaging-aware, channel-aware, opt-out).  ← after 4.5 so
    the install-type detection targets real formats.
-6. **4.5 Packaging** (Flatpak + AppImage) on Linux; exe stays on Windows.
+6. **4.5 Packaging** (Flatpak) on Linux; exe stays on Windows.
 7. **4.7 Release cycle** (`RELEASING.md`, `tools/release.py`, nightly + tag CI).
    — **Linux DONE** (`tools/release.py` + `tests/test_release.py`,
    `RELEASING.md`, channel-aware `release.yml`; nightly deferred to 4.5).
-8. **Windows mirror** of the shared parts (4.1–4.4, 4.6); Flatpak/AppImage are
+8. **Windows mirror** of the shared parts (4.1–4.4, 4.6); the Flatpak is
    Linux-only.
 
 ## 6. Resolved decisions

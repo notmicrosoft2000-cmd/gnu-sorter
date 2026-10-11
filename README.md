@@ -11,6 +11,7 @@
 - **KDE/Dolphin service menu** — right-click "Sort with Funnel" in Dolphin.
 - **Safe & reversible** — skips in-progress files, stability window, collision-safe, journaled `--undo`.
 - **CLI + background watcher** — `--sweep`, `--watch`, per-folder rules via `--root`.
+- **Flatpak on Linux** — install from our own repo and update with `flatpak update`.
 - **User-local install** — `./install.sh` (no sudo). `./uninstall.sh` (optionally `--purge`).
 - **Polished UI & About** — clean icon, About dialog with credits and links.
 
@@ -38,9 +39,24 @@ The **rule wizard** walks you through it: pick what to tidy, choose what to catc
 
 See more: [Website](https://notmicrosoft2000-cmd.github.io/gnu-sorter/) · [Documentation](https://notmicrosoft2000-cmd.github.io/gnu-sorter/docs.html)
 
+## Installation (Linux — Flatpak)
+
+The primary Linux package is a **Flatpak**, served from our own repository:
+
+```bash
+flatpak remote-add --if-not-exists funnel \
+  https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo
+flatpak install funnel io.neptunepc.Funnel
+flatpak run io.neptunepc.Funnel
+```
+
+Updates arrive through `flatpak update`. See [`PACKAGING.md`](PACKAGING.md) for
+the manifest and the sandbox limitations (no tray icon, no login autostart).
+
 ## Installation (user-local)
 
-**One line** (downloads the installer script, clones the repo, and runs `install.sh`):
+Prefer a plain checkout (devs, CI, or a system without Flatpak)? The installer
+script clones the repo and drops a user-local copy in place:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash
@@ -54,7 +70,10 @@ curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/mai
 
 ## Updating
 
-The app updates itself from GitHub Releases:
+> **Flatpak users:** update with `flatpak update io.neptunepc.Funnel` (or your
+> software centre). The self-updater below is for the user-local install only.
+
+The user-local install updates itself from GitHub Releases:
 
 ```bash
 gnu-sorter --update-check   # what's available?

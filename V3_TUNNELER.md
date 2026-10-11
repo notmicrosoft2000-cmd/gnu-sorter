@@ -182,17 +182,16 @@ the Windows engine ignores those keys entirely.
   export/import, configurable retention.
 - **Customization:** theme (system/light/dark, lime accent), per-rule
   `icon`/`color`, category icons, real settings.
-- **Updates v2:** packaging-aware (Flatpak → defer to `flatpak update`;
-  AppImage → replace the file; script install → current updater), channel-aware,
-  with an opt-out.
-- **Packaging:** **Flatpak + AppImage** on Linux; the self-contained `.exe`
-  stays on Windows.
+- **Updates v2:** packaging-aware (Flatpak → defer to `flatpak update`; script
+  install → current updater), channel-aware, with an opt-out.
+- **Packaging:** a **Flatpak** on Linux (self-hosted OSTree repo on GitHub
+  Pages); the self-contained `.exe` stays on Windows. AppImage was dropped.
 - **Release cycle:** `indev → alpha → beta → rc → release`, automated via
   `tools/release.py`, tag CI and a nightly `indev` workflow (`RELEASING.md`).
 
 ### Status
-- Linux: PENDING (lands first). Windows: PENDING (mirrors the shared parts;
-  Flatpak/AppImage are Linux-only).
+- Linux: IN PROGRESS — 4.1–4.4, 4.5 (Flatpak) and 4.7 landed. Windows: PENDING
+  (mirrors the shared parts; the Flatpak is Linux-only).
 
 ---
 
@@ -221,7 +220,7 @@ the Windows engine ignores those keys entirely.
 | 1 | Download detection (two-tier hold) | ✅ engine+cli+gui+tests on main | ✅ pushed `0b9f50f`, MSBuild CI validating |
 | 2 | Journal v2 & restore | ✅ done (`tests/test_journal.py`, CLI selectors, rotation, v2 schema) | ✅ engine+Activity (v2 schema, selectors, collision-safe restore, rotation, repair, sweep-undo) |
 | 3 | Rule wizard (6 steps) + rules page + journal search | ✅ done — rules page + advanced editor + 6-step wizard + journal search/index/backup/restore ([design](PHASE3_DESIGN.md)) | ✅ done — schema/engine parity, rules page, 6-step wizard, journal search/index/backup/restore (MSBuild CI green) |
-| 4 | Ship it — journal, customization, packaging, release cycle | ⏳ planned ([design](PHASE4_DESIGN.md)) | ⏳ planned (shared parts; Flatpak/AppImage Linux-only) |
+| 4 | Ship it — journal, customization, packaging, release cycle | 🔄 in progress — 4.1–4.4 + 4.5 (Flatpak) + 4.7 done ([design](PHASE4_DESIGN.md)) | ⏳ planned (shared parts; the Flatpak is Linux-only) |
 | 5 | Design & mascot | ⏳ | ⏳ |
 
 Every phase lands on `main` incrementally; releases ride on future tags
