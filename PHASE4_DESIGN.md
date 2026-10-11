@@ -174,6 +174,10 @@ SemVer 2.0.0 with pre-release identifiers, one channel each:
    — **Linux DONE** (`9b652bd`: `__version__` single-source, dynamic
    `pyproject`, `CHANGELOG.md`, stale v2.0 strings fixed, version guard test).
 2. **4.2 Icons** (master SVG → PNG/ICO → GResource → packages).
+   — **Linux DONE** (kept the blue-folder design): committed the hicolor PNG
+   ladder + a `data/icons/gnu-sorter.png` for the tray, moved `install.sh` onto
+   the single-source `data/gnu-sorter.desktop`, removed the rsvg/inkscape
+   requirement, and added `tests/test_assets.py`. Packaging export lands in 4.5.
 3. **4.3 Journal** (index, filters, restore, retention).
 4. **4.4 Customization & settings.**
 5. **4.6 Updates v2** (packaging-aware, channel-aware, opt-out).  ← after 4.5 so

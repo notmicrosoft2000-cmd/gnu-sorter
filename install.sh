@@ -38,34 +38,23 @@ ln -sf "$APP_DIR/main.py" "$BIN_DIR/gnu-sorter"
 chmod +x "$APP_DIR/main.py"
 
 echo "[install] Desktop entry"
-cat > "$DESK_DIR/gnu-sorter.desktop" << 'DESK'
-[Desktop Entry]
-Type=Application
-Name=Funnel
-Comment=Automatically sort files into category folders
-Exec=gnu-sorter --gui
-Icon=gnu-sorter
-Terminal=false
-Categories=Utility;FileTools;
-StartupNotify=true
-DESK
+cp "$APP_DIR/data/gnu-sorter.desktop" "$DESK_DIR/gnu-sorter.desktop"
 
-echo "[install] Icons (SVG + generated PNGs)"
-cp "$APP_DIR/data/icons/gnu-sorter.svg" "$ICON_DIR/scalable/apps/gnu-sorter.svg" 2>/dev/null || true
-
-if command -v rsvg-convert >/dev/null 2>&1; then
-  for sz in 16 22 24 32 48 64 128 256 512; do
-    mkdir -p "$ICON_DIR/${sz}x${sz}/apps"
-    rsvg-convert -w "$sz" -h "$sz" "$APP_DIR/data/icons/gnu-sorter.svg" -o "$ICON_DIR/${sz}x${sz}/apps/gnu-sorter.png" 2>/dev/null || true
-  done
-elif command -v inkscape >/dev/null 2>&1; then
-  for sz in 16 22 24 32 48 64 128 256 512; do
-    mkdir -p "$ICON_DIR/${sz}x${sz}/apps"
-    inkscape -z -w "$sz" -h "$sz" "$APP_DIR/data/icons/gnu-sorter.svg" -o "$ICON_DIR/${sz}x${sz}/apps/gnu-sorter.png" 2>/dev/null || true
-  done
+echo "[install] Icons (SVG + committed PNG ladder)"
+if [ -d "$APP_DIR/data/icons/hicolor" ]; then
+  cp -r "$APP_DIR/data/icons/hicolor/." "$ICON_DIR/"
 else
-  echo "[install] (no rsvg-convert/inkscape — skipping raster icon generation; SVG only)"
+  # Fallback for source trees without the committed ladder.
+  cp "$APP_DIR/data/icons/gnu-sorter.svg" "$ICON_DIR/scalable/apps/gnu-sorter.svg" 2>/dev/null || true
+  if command -v rsvg-convert >/dev/null 2>&1; then
+    for sz in 16 22 24 32 48 64 128 256 512; do
+      mkdir -p "$ICON_DIR/${sz}x${sz}/apps"
+      rsvg-convert -w "$sz" -h "$sz" "$APP_DIR/data/icons/gnu-sorter.svg" -o "$ICON_DIR/${sz}x${sz}/apps/gnu-sorter.png" 2>/dev/null || true
+    done
+  fi
 fi
+command -v gtk-update-icon-cache >/dev/null 2>&1 && \
+  gtk-update-icon-cache -q -t -f "$ICON_DIR" 2>/dev/null || true
 
 echo "[install] KDE service menu"
 cp "$APP_DIR/data/kio-servicemenu/gnu-sorter-sort.desktop" "$KIO_DIR/gnu-sorter-sort.desktop" 2>/dev/null || true
