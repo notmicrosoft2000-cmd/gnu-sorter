@@ -108,9 +108,14 @@ Activity tab lists past moves.
 - **Rotation:** trims to last ~2500 entries when history grows beyond 1 MB.
 - `tests/test_journal.py`: 10 tests validating rich fields, batching, selectors, collision/restore semantics, legacy formats, repair, rotation.
 
-### Windows (TODO — Phase 2b)
-- Mirror journal v2 schema, selectors and collision-safe/verification logic in C# `SortEngine` (History/Undo). Keep legacy parsing intact.
-- Add the same CLI-like restore selectors and prepare for an Undo action hook for toast notifications.
+### Windows (DONE — Phase 2b)
+- **Journal v2:** `JournalEntry` writes `v:2`, `id`, `batch` (sweep op id), `rule`, `root`, `size`, `mtime`; `Sweep` mints one batch id and carries it on `SortStats.BatchId`, passing it through `SortFile`. Legacy tab-separated and v1 JSON lines still parse (dropped only when malformed).
+- **Selectors:** `Records()`/`Undo()` accept `limit`, `since`/`before` (`30m,2h,7d` or `YYYY-MM-DD[ HH:MM:SS]`), `folder`, `rule` (case-insensitive) and `batch`.
+- **Undo improvements:** collision-safe restore (occupied original → `name (1).ext`); already-restored detection via size+mtime (drops the row); warns when the file's size changed; keeps un-reversible rows in the journal; `dryRun` counts only.
+- **Rotation & repair:** trims to the most recent ~2500 entries once the file passes ~1 MB; `RepairJournal()` drops malformed lines.
+- **Toast hook:** Activity page gains an **"Undo last sweep"** action that reverses the whole most-recent batch (the same call a toast notification's Undo button would make); rows now show the catching rule.
+- mtimes are stored as Unix-epoch seconds (matching Python's `st_mtime`), so the two apps share one journal format.
+- C# has no local .NET toolchain — validated by the MSBuild CI workflow on every `main` push.
 
 ---
 
@@ -164,7 +169,7 @@ Advanced form.
 | Phase | Theme | Linux | Windows |
 |------|-------|-------|---------|
 | 1 | Download detection (two-tier hold) | ✅ engine+cli+gui+tests on main | ✅ pushed `0b9f50f`, MSBuild CI validating |
-| 2 | Journal v2 & restore | ✅ done (`tests/test_journal.py`, CLI selectors, rotation, v2 schema) | ⏳ mirror in C# + selectors/notifications |
+| 2 | Journal v2 & restore | ✅ done (`tests/test_journal.py`, CLI selectors, rotation, v2 schema) | ✅ engine+Activity (v2 schema, selectors, collision-safe restore, rotation, repair, sweep-undo) |
 | 3 | Rule wizard (5 steps) | ⏳ | ⏳ |
 | 4 | Design & mascot | ⏳ | ⏳ |
 
