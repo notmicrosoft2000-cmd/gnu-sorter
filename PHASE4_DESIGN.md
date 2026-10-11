@@ -171,6 +171,8 @@ SemVer 2.0.0 with pre-release identifiers, one channel each:
 ## 5. Sub-slice order
 
 1. **4.1 Branding + version single-source + CHANGELOG.** (small, unblocks CI)
+   — **Linux DONE** (`9b652bd`: `__version__` single-source, dynamic
+   `pyproject`, `CHANGELOG.md`, stale v2.0 strings fixed, version guard test).
 2. **4.2 Icons** (master SVG → PNG/ICO → GResource → packages).
 3. **4.3 Journal** (index, filters, restore, retention).
 4. **4.4 Customization & settings.**
@@ -178,6 +180,8 @@ SemVer 2.0.0 with pre-release identifiers, one channel each:
    the install-type detection targets real formats.
 6. **4.5 Packaging** (Flatpak + AppImage) on Linux; exe stays on Windows.
 7. **4.7 Release cycle** (`RELEASING.md`, `tools/release.py`, nightly + tag CI).
+   — **Linux DONE** (`tools/release.py` + `tests/test_release.py`,
+   `RELEASING.md`, channel-aware `release.yml`; nightly deferred to 4.5).
 8. **Windows mirror** of the shared parts (4.1–4.4, 4.6); Flatpak/AppImage are
    Linux-only.
 

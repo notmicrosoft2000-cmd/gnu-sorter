@@ -25,11 +25,22 @@ jobs:
         run: python -m compileall -q gnu_sorter main.py
 
       - name: Unit tests
-        run: python -m unittest tests.test_updater
+        run: python -m unittest discover -s tests
+
+      - name: Determine channel
+        id: channel
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            *-alpha*|*-beta*|*-rc*|*-indev*) echo "prerelease=true"  >> "$GITHUB_OUTPUT" ;;
+            *)                               echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+          echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          name: ${{ steps.channel.outputs.tag }}
+          prerelease: ${{ steps.channel.outputs.prerelease }}
           generate_release_notes: true
           files: |
             install.sh
