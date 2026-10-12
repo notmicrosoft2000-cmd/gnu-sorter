@@ -23,7 +23,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Pango", "1.0")
 gi.require_version("PangoCairo", "1.0")
-from gi.repository import (Adw, Gdk, Gio, GLib, Gtk,  # noqa: E402
+from gi.repository import (Adw, Gdk, Gio, GLib, GObject, Gtk,  # noqa: E402
                            Pango, PangoCairo)
 
 from . import (APP_ID, APP_NAME, CREATOR, ISSUES, REPO, WEBSITE,  # noqa: E402
@@ -75,15 +75,102 @@ _SCHEMES = {"default": Adw.ColorScheme.DEFAULT,
             "light": Adw.ColorScheme.FORCE_LIGHT,
             "dark": Adw.ColorScheme.FORCE_DARK}
 
+# ------------------------------------------------------------------ branding --
+#
+# Every accent ships a light and a dark variant so contrast holds on either
+# background. The default mirrors the project website, which uses a lively
+# lime on dark (#a3e635) and a deeper shade on light (#4d7c0f).
+ACCENTS: dict[str, dict[str, tuple[str, str]]] = {
+    "green":  {"light": ("#4d7c0f", "#ffffff"), "dark": ("#a3e635", "#0b0d08")},
+    "lime":   {"light": ("#65a30d", "#ffffff"), "dark": ("#bef264", "#0b0d08")},
+    "teal":   {"light": ("#0f766e", "#ffffff"), "dark": ("#2dd4bf", "#04201d")},
+    "cyan":   {"light": ("#0e7490", "#ffffff"), "dark": ("#67e8f9", "#04222b")},
+    "blue":   {"light": ("#1c71d8", "#ffffff"), "dark": ("#78aeff", "#0a1f3d")},
+    "purple": {"light": ("#7c3aed", "#ffffff"), "dark": ("#c4a0ff", "#23123f")},
+    "pink":   {"light": ("#d6336c", "#ffffff"), "dark": ("#ff8fbe", "#3d0a20")},
+    "red":    {"light": ("#e01b24", "#ffffff"), "dark": ("#ff7b72", "#360c0a")},
+    "orange": {"light": ("#c64600", "#ffffff"), "dark": ("#ffb45c", "#3a1e00")},
+    "yellow": {"light": ("#a1660a", "#ffffff"), "dark": ("#f5c211", "#332600")},
+    "slate":  {"light": ("#5e6b78", "#ffffff"), "dark": ("#9fb0c0", "#131a20")},
+}
 
-def apply_color_scheme(cfg: Config) -> None:
-    """Apply the saved appearance choice (system / light / dark)."""
-    name = str(cfg.load_settings().get("color_scheme", "default")).lower()
+# Menu order: follow the desktop, then the brand green, then the rest.
+ACCENT_CHOICES: list[tuple[str, str]] = [
+    ("system", "Follow the desktop"),
+    ("green", "Funnel green"),
+]
+ACCENT_CHOICES += [(key, key.capitalize()) for key in
+                   ("lime", "teal", "cyan", "blue", "purple", "pink",
+                    "red", "orange", "yellow", "slate")]
+
+_brand_provider: Gtk.CssProvider | None = None
+_style_hooked = False
+
+
+def _brand_css(accent: str, dark: bool) -> str:
+    """The app stylesheet, with the chosen accent appended as named colours.
+
+    ``accent == "system"`` injects nothing, so libadwaita keeps the desktop's
+    own accent colour.
+    """
     try:
-        Adw.StyleManager.get_default().set_color_scheme(
-            _SCHEMES.get(name, Adw.ColorScheme.DEFAULT))
+        css = (Path(__file__).with_name("brand.css")).read_text(encoding="utf-8")
+    except OSError:
+        css = ""
+    entry = ACCENTS.get(accent)
+    if entry is not None:
+        bg, fg = entry["dark" if dark else "light"]
+        css += ("\n@define-color accent_bg_color %s;\n"
+                "@define-color accent_color %s;\n"
+                "@define-color accent_fg_color %s;\n" % (bg, bg, fg))
+    return css
+
+
+def _hook_style_manager(cfg: Config) -> None:
+    """Re-apply the theme when the desktop flips between light and dark."""
+    global _style_hooked
+    if _style_hooked:
+        return
+    try:
+        Adw.StyleManager.get_default().connect(
+            "notify::dark", lambda *_a: apply_color_scheme(cfg))
+        _style_hooked = True
     except Exception:
         pass
+
+
+def apply_color_scheme(cfg: Config) -> None:
+    """Apply the saved appearance: colour scheme + accent colour."""
+    global _brand_provider
+    settings = cfg.load_settings()
+    name = str(settings.get("color_scheme", "default")).lower()
+    accent = str(settings.get("accent", "green")).lower()
+    manager = Adw.StyleManager.get_default()
+    try:
+        manager.set_color_scheme(_SCHEMES.get(name, Adw.ColorScheme.DEFAULT))
+    except Exception:
+        pass
+    if name == "dark":
+        dark = True
+    elif name == "light":
+        dark = False
+    else:
+        try:
+            dark = bool(manager.get_dark())
+        except Exception:
+            dark = False
+    display = Gdk.Display.get_default()
+    if display is None:
+        return
+    if _brand_provider is None:
+        _brand_provider = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(
+            display, _brand_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+    try:
+        _brand_provider.load_from_string(_brand_css(accent, dark))
+    except Exception:
+        pass
+    _hook_style_manager(cfg)
 
 
 def _heading(text: str) -> Gtk.Label:
@@ -205,27 +292,51 @@ class MainWindow(Adw.ApplicationWindow):
             self.set_icon_name("gnu-sorter")
         except Exception:
             pass
-        self.set_default_size(940, 640)
+        self.set_default_size(980, 680)
 
+        # --- content: one view stack, switched from the header (wide) or a
+        # bottom bar (narrow). Settings lives in a Preferences dialog.
+        self.stack = Adw.ViewStack()
+        self.stack.set_vexpand(True)
+        self.stack.set_hexpand(True)
+        self.stack.add_titled_with_icon(
+            self._page_folders(), "folders", "Folders", "folder-symbolic")
+        self.stack.add_titled_with_icon(
+            self._page_rules(), "rules", "Rules", "emblem-documents-symbolic")
+        self.stack.add_titled_with_icon(
+            self._page_activity(), "activity", "Activity",
+            "document-open-recent-symbolic")
+
+        # --- header: title/switcher in the middle, actions on the sides
         header = Adw.HeaderBar()
-        header.set_title_widget(
-            Adw.WindowTitle(title=APP_NAME, subtitle="Automatic folder sorting"))
+        switcher_title = Adw.ViewSwitcherTitle()
+        switcher_title.set_title(APP_NAME)
+        switcher_title.set_stack(self.stack)
+        header.set_title_widget(switcher_title)
 
         self.sort_btn = Gtk.Button(label="Sort Now")
         self.sort_btn.add_css_class("suggested-action")
+        self.sort_btn.set_tooltip_text("Sort every watched folder now")
         self.sort_btn.connect("clicked", self.on_sort_now)
         header.pack_start(self.sort_btn)
+        self.sort_spinner = Gtk.Spinner(valign=Gtk.Align.CENTER)
+        self.sort_spinner.set_visible(False)
+        header.pack_start(self.sort_spinner)
 
         menu = Gio.Menu()
         quick = Gio.Menu()
         quick.append("Sort now", "app.sort-now")
         menu.append_section(None, quick)
         tail = Gio.Menu()
+        tail.append("Preferences", "win.preferences")
+        tail.append("Keyboard shortcuts", "win.shortcuts")
         tail.append("Check for updates…", "app.update")
         tail.append("About Funnel", "app.about")
         tail.append("Quit", "app.quit")
         menu.append_section(None, tail)
-        header.pack_end(Gtk.MenuButton(menu_model=menu, icon_name="open-menu-symbolic"))
+        header.pack_end(Gtk.MenuButton(menu_model=menu,
+                                       icon_name="open-menu-symbolic",
+                                       tooltip_text="Main menu"))
 
         self.watch_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
         self.watch_switch.set_tooltip_text("Background auto-sort (systemd service)")
@@ -236,17 +347,26 @@ class MainWindow(Adw.ApplicationWindow):
         watch_box.append(self.watch_switch)
         header.pack_end(watch_box)
 
+        # --- a slim banner for transient, dismissible notices
+        self.banner = Adw.Banner()
+        self.banner.set_revealed(False)
+
         self.toolbar = Adw.ToolbarView()
         self.toolbar.add_top_bar(header)
+        self.switcher_bar = Adw.ViewSwitcherBar()
+        self.switcher_bar.set_stack(self.stack)
+        self.toolbar.add_bottom_bar(self.switcher_bar)
+        self.toolbar.set_content(self.stack)
+        switcher_title.bind_property(
+            "title-visible", self.switcher_bar, "reveal",
+            GObject.BindingFlags.SYNC_CREATE)
 
-        body = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        body.append(self._build_sidebar())
-        body.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
-        body.append(self._build_stack())
-        self.toolbar.set_content(body)
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        body.append(self.banner)
+        body.append(self.toolbar)
 
         self.toasts = Adw.ToastOverlay()
-        self.toasts.set_child(self.toolbar)
+        self.toasts.set_child(body)
         self.set_content(self.toasts)
 
         # right-click menu (About / Sort now)
@@ -258,7 +378,7 @@ class MainWindow(Adw.ApplicationWindow):
         click.connect("pressed", self._on_context_press)
         self.toasts.add_controller(click)
 
-        self.sidebar.select_row(self.sidebar.get_row_at_index(0))
+        self.stack.set_visible_child_name("folders")
         self.refresh_folders()
         self.refresh_rules_folders()
         self.refresh_activity()
@@ -273,10 +393,23 @@ class MainWindow(Adw.ApplicationWindow):
         action = Gio.SimpleAction.new("advanced", None)
         action.connect("activate", lambda *_: self.on_advanced())
         self.add_action(action)
-        for i, (label, _rules) in enumerate(PRESETS):
+        prefs = Gio.SimpleAction.new("preferences", None)
+        prefs.connect("activate", lambda *_: self.show_preferences())
+        self.add_action(prefs)
+        shortcuts = Gio.SimpleAction.new("shortcuts", None)
+        shortcuts.connect("activate", lambda *_: self.show_shortcuts())
+        self.add_action(shortcuts)
+        for i, (_label, _rules) in enumerate(PRESETS):
             act = Gio.SimpleAction.new(f"preset-{i}", None)
             act.connect("activate", lambda *_a, idx=i: self.on_preset(idx))
             self.add_action(act)
+        for name, accel in (("win.preferences", "<Control>comma"),
+                            ("win.shortcuts", "<Control>question"),
+                            ("app.sort-now", "<Control>n")):
+            try:
+                self.app.set_accels_for_action(name, [accel])
+            except Exception:
+                pass
 
     # ------------------------------------------------------- self-update --
     def on_update_clicked(self, *_args) -> None:
@@ -348,46 +481,25 @@ class MainWindow(Adw.ApplicationWindow):
         about.add_link("Source code", REPO)
         about.present(self)
 
-    # ------------------------------------------------------------ sidebar ---
-    def _build_sidebar(self) -> Gtk.Widget:
-        self.sidebar = Gtk.ListBox()
-        self.sidebar.add_css_class("navigation-sidebar")
-        self.sidebar.set_size_request(190, -1)
-        for name, icon in [("Folders", "folder-symbolic"),
-                           ("Rules", "emblem-documents-symbolic"),
-                           ("Activity", "document-open-recent-symbolic"),
-                           ("Settings", "emblem-system-symbolic")]:
-            row = Gtk.ListBoxRow()
-            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-            for setter in (box.set_margin_top, box.set_margin_bottom):
-                setter(8)
-            box.set_margin_start(10)
-            box.set_margin_end(10)
-            box.append(Gtk.Image.new_from_icon_name(icon))
-            box.append(Gtk.Label(label=name, xalign=0))
-            row.set_child(box)
-            row.page = name.lower()
-            self.sidebar.append(row)
-        self.sidebar.connect("row-selected", self._on_nav)
-        scroll = Gtk.ScrolledWindow()
-        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scroll.set_child(self.sidebar)
-        return scroll
+    # --------------------------------------------------------- preferences ---
+    def show_preferences(self):
+        if getattr(self, "_prefs", None) is None:
+            self._prefs = PreferencesDialog(self)
+        self._prefs.present(self)
 
-    def _build_stack(self) -> Gtk.Widget:
-        self.stack = Gtk.Stack()
-        self.stack.set_hexpand(True)
-        self.stack.set_vexpand(True)
-        self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
-        self.stack.add_named(self._page_folders(), "folders")
-        self.stack.add_named(self._page_rules(), "rules")
-        self.stack.add_named(self._page_activity(), "activity")
-        self.stack.add_named(self._page_settings(), "settings")
-        return self.stack
-
-    def _on_nav(self, _listbox, row):
-        if row is not None and hasattr(self, "stack"):
-            self.stack.set_visible_child_name(row.page)
+    def show_shortcuts(self):
+        try:
+            dialog = Adw.ShortcutsDialog()
+            section = Adw.ShortcutsSection(title="General")
+            for title, accel in (("Sort now", "<Control>n"),
+                                 ("Preferences", "<Control>comma"),
+                                 ("Keyboard shortcuts", "<Control>question"),
+                                 ("Quit", "<Control>q")):
+                section.add(Adw.ShortcutsItem(title=title, accelerator=accel))
+            dialog.add(section)
+            dialog.present(self)
+        except Exception:
+            self.toast("Shortcuts: Ctrl+N sort · Ctrl+, preferences · Ctrl+Q quit")
 
     # ------------------------------------------------------------ folders ---
     def _page_folders(self) -> Gtk.Widget:
@@ -411,16 +523,39 @@ class MainWindow(Adw.ApplicationWindow):
                           "watched folder. Every folder can have its own rules."))
 
         self.roots_list = _listbox()
-        outer.append(_scroll(self.roots_list))
-        return outer
+        self.roots_stack = Gtk.Stack()
+        self.roots_stack.set_vexpand(True)
+        self.roots_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        self.roots_stack.add_named(_scroll(self.roots_list), "list")
+
+        empty = Adw.StatusPage(
+            icon_name="folder-open-symbolic",
+            title="No folders yet",
+            description="Add a folder and Funnel keeps it tidy — files sort "
+                        "into category folders automatically.")
+        empty.add_css_class("funnel-empty")
+        empty_btn = Gtk.Button(label="Add Folder")
+        empty_btn.add_css_class("pill")
+        empty_btn.add_css_class("suggested-action")
+        empty_btn.set_halign(Gtk.Align.CENTER)
+        empty_btn.connect("clicked", self.on_add_folder)
+        empty.set_child(empty_btn)
+        self.roots_stack.add_named(empty, "empty")
+
+        outer.append(self.roots_stack)
+
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(860)
+        clamp.set_tightening_threshold(560)
+        clamp.set_vexpand(True)
+        clamp.set_child(outer)
+        return clamp
 
     def refresh_folders(self):
         self.roots_list.remove_all()
         roots = self.cfg.load_roots()
         if not roots:
-            self.roots_list.append(
-                Adw.ActionRow(title="No folders yet",
-                              subtitle="Use “Add Folder” to get started"))
+            self.roots_stack.set_visible_child_name("empty")
             return
         for r in roots:
             path = expand(r["path"])
@@ -439,6 +574,7 @@ class MainWindow(Adw.ApplicationWindow):
             row.add_suffix(_icon_button("user-trash-symbolic", "Remove",
                                         self.on_remove_root, r["path"]))
             self.roots_list.append(row)
+        self.roots_stack.set_visible_child_name("list")
 
     def on_root_toggled(self, switch, _param, path):
         roots = self.cfg.load_roots()
@@ -973,8 +1109,26 @@ class MainWindow(Adw.ApplicationWindow):
         outer.append(bar)
 
         self.activity_list = _listbox()
-        outer.append(_scroll(self.activity_list))
-        return outer
+        self.activity_stack = Gtk.Stack()
+        self.activity_stack.set_vexpand(True)
+        self.activity_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        self.activity_stack.add_named(_scroll(self.activity_list), "list")
+
+        activity_empty = Adw.StatusPage(
+            icon_name="document-open-recent-symbolic",
+            title="Nothing sorted yet",
+            description="Once Funnel moves a file you'll see it here, and you "
+                        "can undo or restore it.")
+        activity_empty.add_css_class("funnel-empty")
+        self.activity_stack.add_named(activity_empty, "empty")
+        outer.append(self.activity_stack)
+
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(900)
+        clamp.set_tightening_threshold(560)
+        clamp.set_vexpand(True)
+        clamp.set_child(outer)
+        return clamp
 
     def _activity_query(self) -> str | None:
         entry = getattr(self, "activity_search", None)
@@ -1035,7 +1189,7 @@ class MainWindow(Adw.ApplicationWindow):
                                        ext=self._activity_ext())
             self.activity_list.remove_all()
             if not rows:
-                self.activity_list.append(Adw.ActionRow(title="Nothing sorted yet"))
+                self.activity_stack.set_visible_child_name("empty")
             else:
                 for r in reversed(rows):
                     src_p, dest_p = Path(r["src"]), Path(r["dest"])
@@ -1045,6 +1199,7 @@ class MainWindow(Adw.ApplicationWindow):
                         subtitle=f"{rule} · {fmt(src_p)} → {dest_p.parent.name}/")
                     row.add_suffix(Gtk.Label(label=r["ts"].split(" ")[-1]))
                     self.activity_list.append(row)
+                self.activity_stack.set_visible_child_name("list")
             total = len(index)
             shown = len(rows)
             self.activity_summary.set_text(
@@ -1094,6 +1249,17 @@ class MainWindow(Adw.ApplicationWindow):
             str(s.get("color_scheme", "default")).lower(), 0))
         scheme.connect("notify::selected", self._on_scheme)
         look.add(scheme)
+
+        accent = Adw.ComboRow(
+            title="Accent colour",
+            subtitle="Follow the desktop, or pick a Funnel colour")
+        accent.set_model(Gtk.StringList.new(
+            [label for _key, label in ACCENT_CHOICES]))
+        _accent_keys = [key for key, _label in ACCENT_CHOICES]
+        _cur = str(s.get("accent", "green")).lower()
+        accent.set_selected(_accent_keys.index(_cur) if _cur in _accent_keys else 1)
+        accent.connect("notify::selected", self._on_accent)
+        look.add(accent)
         page.add(look)
 
         behaviour = Adw.PreferencesGroup(title="Behaviour")
@@ -1208,6 +1374,16 @@ class MainWindow(Adw.ApplicationWindow):
         self.cfg.save_settings(s)
         apply_color_scheme(self.cfg)
 
+    def _on_accent(self, row, _param):
+        keys = [key for key, _label in ACCENT_CHOICES]
+        idx = row.get_selected()
+        if not (0 <= idx < len(keys)):
+            return
+        s = self.cfg.load_settings()
+        s["accent"] = keys[idx]
+        self.cfg.save_settings(s)
+        apply_color_scheme(self.cfg)
+
     def on_start_toggled(self, row, _param):
         if row.get_active():
             service.install()
@@ -1242,8 +1418,18 @@ class MainWindow(Adw.ApplicationWindow):
     def toast(self, message: str):
         self.toasts.add_toast(Adw.Toast.new(message))
 
+    def _set_sorting(self, active: bool) -> None:
+        """Show the button + spinner as busy while a sweep runs."""
+        self.sort_btn.set_sensitive(not active)
+        self.sort_btn.set_label("Sorting…" if active else "Sort Now")
+        self.sort_spinner.set_visible(active)
+        if active:
+            self.sort_spinner.start()
+        else:
+            self.sort_spinner.stop()
+
     def on_sort_now(self, _btn):
-        self.sort_btn.set_sensitive(False)
+        self._set_sorting(True)
         self.toast("Sorting…")
 
         def work():
@@ -1257,7 +1443,7 @@ class MainWindow(Adw.ApplicationWindow):
         threading.Thread(target=work, daemon=True).start()
 
     def _on_sweep_done(self, stats):
-        self.sort_btn.set_sensitive(True)
+        self._set_sorting(False)
         self.refresh_activity()
         verb = "Sorted" if stats["moved"] else "Nothing to sort"
         message = (f"{verb}: {stats['moved']} file(s), "
@@ -1268,9 +1454,21 @@ class MainWindow(Adw.ApplicationWindow):
         return False
 
     def _on_sweep_failed(self, message):
-        self.sort_btn.set_sensitive(True)
+        self._set_sorting(False)
         self.toast(f"Sorting failed: {message}")
         return False
+
+
+# --------------------------------------------------------- preferences -------
+
+class PreferencesDialog(Adw.PreferencesDialog):
+    """The app's Preferences (Ctrl+, or the main menu)."""
+
+    def __init__(self, window: MainWindow):
+        super().__init__()
+        self.win = window
+        self.set_title("Preferences")
+        self.add(window._page_settings())
 
 
 # ------------------------------------------------------------- wizard -------
@@ -1383,18 +1581,18 @@ class SortPreview(Gtk.DrawingArea):
 
         self._round_rect(cr, dest_x, dest_y + dest_h * 0.22,
                          dest_w, dest_h * 0.78, 8.0)
-        cr.set_source_rgba(0.98, 0.79, 0.28, 0.95)
+        cr.set_source_rgba(0.396, 0.639, 0.051, 0.95)
         cr.fill()
         self._round_rect(cr, dest_x + 12, dest_y, dest_w * 0.42,
                          dest_h * 0.34, 5.0)
-        cr.set_source_rgba(0.98, 0.79, 0.28, 0.95)
+        cr.set_source_rgba(0.396, 0.639, 0.051, 0.95)
         cr.fill()
         layout = area.create_pango_layout(self.folder)
         layout.set_width(int(dest_w * Pango.SCALE))
         layout.set_alignment(Pango.Alignment.CENTER)
         layout.set_ellipsize(Pango.EllipsizeMode.END)
         cr.move_to(dest_x, dest_y + dest_h + 4)
-        cr.set_source_rgba(0.5, 0.5, 0.56, 1.0)
+        cr.set_source_rgba(0.55, 0.56, 0.62, 1.0)
         PangoCairo.show_layout(cr, layout)
 
         for i, name in enumerate(files):
@@ -1413,16 +1611,16 @@ class SortPreview(Gtk.DrawingArea):
 
     def _chip(self, area, cr, x, y, w, h, text, alpha):
         self._round_rect(cr, x, y, w, h, 6.0)
-        cr.set_source_rgba(0.30, 0.55, 0.95, 0.16 * alpha)
+        cr.set_source_rgba(0.639, 0.902, 0.208, 0.9 * alpha)
         cr.fill_preserve()
         cr.set_line_width(1.2)
-        cr.set_source_rgba(0.30, 0.55, 0.95, 0.85 * alpha)
+        cr.set_source_rgba(0.396, 0.639, 0.051, 0.95 * alpha)
         cr.stroke()
         layout = area.create_pango_layout(text)
         layout.set_width(int((w - 12) * Pango.SCALE))
         layout.set_ellipsize(Pango.EllipsizeMode.END)
         cr.move_to(x + 6, y + 4)
-        cr.set_source_rgba(0.12, 0.14, 0.18, alpha)
+        cr.set_source_rgba(0.043, 0.051, 0.031, alpha)
         PangoCairo.show_layout(cr, layout)
 
     @staticmethod
@@ -1676,6 +1874,7 @@ class RuleWizard:
     def _recipe_card(self, key, title, sub, icon, exts):
         btn = Gtk.Button()
         btn.add_css_class("card")
+        btn.add_css_class("funnel-card")
         btn.set_size_request(170, 96)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         box.set_margin_top(12)

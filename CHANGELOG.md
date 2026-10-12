@@ -9,6 +9,32 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
 
 ## [Unreleased]
 
+### Added
+- **Green brand & accent system**: the app now wears Funnel's colour, taken
+  from the project website (`#a3e635` on dark, `#4d7c0f` on light), applied to
+  buttons, switches, selections and focus rings via an app stylesheet
+  (`gnu_sorter/brand.css`).
+- **Preferences → Accent colour**: follow the desktop, or pick a Funnel colour
+  (green, lime, teal, cyan, blue, purple, pink, red, orange, yellow, slate).
+  Defaults to **Funnel green** and re-tints automatically when the desktop
+  switches between light and dark.
+- **Empty states**: "No folders yet" and "Nothing sorted yet" now show a
+  brand-tinted, gently floating illustration with an inline primary action.
+- **Keyboard shortcuts dialog** (`Ctrl+?`), plus `Ctrl+N` for Sort Now.
+- A busy spinner and "Sorting…" label on the Sort Now button during a sweep.
+- AppStream `<branding>` colours, so software centres tint Funnel green.
+
+### Changed
+- **Rebuilt the app shell**: the hand-rolled sidebar is gone. Folders, Rules
+  and Activity are now header tabs (`Adw.ViewSwitcher`), collapsing to a bottom
+  switcher bar on narrow windows, over an animated view stack; Settings moved
+  into a proper **Preferences dialog** (`Ctrl+,`). Content is centred in an
+  `Adw.Clamp`, and page changes animate.
+- **App icon is now green** to match the brand, regenerated (SVG, every PNG
+  size, the ICO and the website images) from `data/icons/gnu-sorter.svg`.
+- The wizard's "files flow into the folder" animation now flows into a green
+  folder.
+
 ## [3.0.0] - 2026-10-12 "Tunneler"
 
 ### Added

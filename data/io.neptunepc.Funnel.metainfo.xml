@@ -45,6 +45,11 @@
     <keyword>tidy</keyword>
   </keywords>
 
+  <branding>
+    <color type="primary" scheme_preference="light">#4d7c0f</color>
+    <color type="primary" scheme_preference="dark">#a3e635</color>
+  </branding>
+
   <content_rating type="oars-1.1"/>
 
   <releases>

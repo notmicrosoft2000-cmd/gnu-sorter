@@ -95,6 +95,9 @@ DEFAULT_SETTINGS = {
     "check_for_updates": True,
     # Appearance: "default" (follow the system), "light" or "dark".
     "color_scheme": "default",
+    # Accent colour: "system" follows the desktop, otherwise a key from the
+    # Funnel palette ("green", "blue", ...). Defaults to the brand green.
+    "accent": "green",
     # Journal retention: trim once the log passes `history_max_bytes`, keeping
     # the most recent `history_max_entries` (a full copy is saved as .bak).
     "history_max_entries": 2500,

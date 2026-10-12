@@ -1,0 +1,33 @@
+/* Funnel — application stylesheet (codename: gnu-sorter)
+ * ------------------------------------------------------
+ * The accent colours themselves are injected at runtime by the app (see
+ * apply_color_scheme in gui.py) so the user can follow the desktop or pick a
+ * Funnel colour. Everything else here is cosmetic polish on top of
+ * libadwaita, and every rule is safe to drop if a future libadwaita adds its
+ * own equivalent. */
+
+/* The brand mark and hero icons use the accent. */
+.funnel-brand {
+  color: @accent_color;
+}
+
+/* Interactive cards (wizard recipe tiles, ...) lift softly on hover. */
+.funnel-card {
+  transition: box-shadow 160ms ease;
+}
+.funnel-card:hover {
+  box-shadow: 0 10px 26px -14px alpha(@accent_color, 0.55);
+}
+
+/* Empty-state illustrations use the brand colour and drift gently, so an
+ * empty page still feels alive. */
+.funnel-empty image {
+  color: @accent_color;
+  animation: funnel-float 4.5s ease-in-out infinite;
+}
+
+@keyframes funnel-float {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
+}

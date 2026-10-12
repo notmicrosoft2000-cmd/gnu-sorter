@@ -37,38 +37,41 @@ def _pump(seconds: float = 0.3) -> None:
         time.sleep(0.01)
 
 
-def _save(widget, name: str, fallback) -> None:
-    w, h = widget.get_width(), widget.get_height()
-    if w <= 1 or h <= 1:
-        w, h = fallback
-    native = widget.get_native()
-    if native is None:
-        print(f"!! no native for {name} (mapped={widget.get_mapped()})",
-              flush=True)
-        return
-    snap = Gtk.Snapshot.new()
-    paintable = Gtk.WidgetPaintable.new(widget)
-    paintable.snapshot(snap, w, h)
-    node = snap.to_node()
-    if node is None:
-        print(f"!! no render node for {name} (size={w}x{h})", flush=True)
-        return
-    renderer = native.get_renderer()
-    viewport = Graphene.Rect().init(0.0, 0.0, float(w), float(h))
-    texture = renderer.render_texture(node, viewport)
-    OUT.mkdir(parents=True, exist_ok=True)
-    texture.save_to_png(str(OUT / name))
-    print(f"saved {name}", flush=True)
+def _save(widget, name: str, fallback, attempts: int = 6) -> None:
+    # The compositor may not have produced a frame for a freshly (re)presented
+    # surface, in which case the snapshot has no render node. Pump the loop and
+    # retry a few times before giving up.
+    for _ in range(attempts):
+        w, h = widget.get_width(), widget.get_height()
+        if w <= 1 or h <= 1:
+            w, h = fallback
+        native = widget.get_native()
+        if native is not None:
+            snap = Gtk.Snapshot.new()
+            paintable = Gtk.WidgetPaintable.new(widget)
+            paintable.snapshot(snap, w, h)
+            node = snap.to_node()
+            if node is not None:
+                renderer = native.get_renderer()
+                viewport = Graphene.Rect().init(0.0, 0.0, float(w), float(h))
+                texture = renderer.render_texture(node, viewport)
+                OUT.mkdir(parents=True, exist_ok=True)
+                texture.save_to_png(str(OUT / name))
+                print(f"saved {name}", flush=True)
+                return
+        _pump(0.25)
+    print(f"!! no render node for {name} (size={w}x{h})", flush=True)
 
 
 def capture(window, name: str) -> None:
     # Grow the toplevel so showcase shots are crisp, re-present and pump the
     # main context briefly so the surface has produced a frame when we
-    # snapshot. The compositor clamps the height to the available screen.
-    window.set_default_size(1440, 1000)
+    # snapshot. Sized to fit a 1536x864 screen so the compositor doesn't have
+    # to clamp the request (which can leave a frame unpainted on some backends).
+    window.set_default_size(1440, 840)
     window.present()
-    _pump(0.5)
-    _save(window, name, (1440, 1000))
+    _pump(0.6)
+    _save(window, name, (1440, 840))
 
 
 def capture_dialog(dialog, name: str, fallback=(1100, 820)) -> None:
@@ -145,7 +148,7 @@ def main() -> int:
         if step == 0:
             capture(win, "1-folders.png")
         elif step == 1:
-            win.sidebar.select_row(win.sidebar.get_row_at_index(1))
+            win.stack.set_visible_child_name("rules")
             capture(win, "2-rules.png")
         elif step == 2:
             # select the custom folder (row 1) to show its "own rules" state
@@ -191,7 +194,7 @@ def main() -> int:
         elif step == 12:
             state["adv"].dialog.close()
         elif step == 13:
-            win.sidebar.select_row(win.sidebar.get_row_at_index(2))
+            win.stack.set_visible_child_name("activity")
             capture(win, "12-activity.png")
         elif step == 14:
             win.activity_search.set_text("screenshot")
@@ -204,9 +207,10 @@ def main() -> int:
         elif step == 16:
             state["restore"].dialog.close()
         elif step == 17:
-            win.sidebar.select_row(win.sidebar.get_row_at_index(3))
-            capture(win, "13-settings.png")
+            win.show_preferences()
+            capture_dialog(win._prefs, "13-preferences.png")
         elif step == 18:
+            win._prefs.close()
             win.show_about()
             capture(win, "14-about.png")
             app.quit()
