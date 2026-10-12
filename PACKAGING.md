@@ -65,9 +65,11 @@ flatpak build-update-repo docs/flatpak
 
 ## Publishing
 
-The [`flatpak.yml`](.github/workflows/flatpak.yml) workflow runs when you
-**publish a GitHub release** (or manually from the Actions tab). It builds the
-OSTree repo into `docs/flatpak/`, writes a `.flatpakrepo` file and a small
+The [`flatpak.yml`](.github/workflows/flatpak.yml) workflow runs when a `v*`
+**tag is pushed** — or when a GitHub release is published, or manually from the
+Actions tab. The tag push is the reliable trigger: a GitHub Release created by
+another workflow's `GITHUB_TOKEN` does not fire `release: published`. It builds
+the OSTree repo into `docs/flatpak/`, writes a `.flatpakrepo` file and a small
 landing page, then commits the result back to `main`.
 
 ### Signing

@@ -71,8 +71,11 @@ tools/release.py cut release --roll-changelog --commit --tag --push
 - `Release (Linux)` builds and publishes a GitHub Release on any `v*` tag.
 - Tags containing `-alpha`, `-beta`, `-rc` or `-indev` are published as
   **prereleases**; a plain `vX.Y.Z` becomes **latest**.
-- The Flatpak repo is refreshed by the `Flatpak (Linux)` workflow, which runs
-  when the release is published (see `PACKAGING.md`).
+- The Flatpak repo is refreshed by the `Flatpak (Linux)` workflow: it runs on
+  the `v*` tag push (and on a published release), building the tagged source
+  and committing the OSTree repo back to `main` (see `PACKAGING.md`). It keys
+  off the tag push because a GitHub Release created by another workflow's
+  `GITHUB_TOKEN` does not fire `release: published`.
 
 ## Checklist
 
