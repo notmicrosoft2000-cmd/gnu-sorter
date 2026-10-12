@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
 (see [`RELEASING.md`](RELEASING.md)).
 
-## [Unreleased] — 3.0.0 "Tunneler"
+## [Unreleased]
+
+## [3.0.0] - 2026-10-12 "Tunneler"
 
 ### Added
 - **Six-step rule wizard**: what to tidy → what to catch (real-file chips +
@@ -62,5 +64,6 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
 - Auto-update support (checks GitHub Releases on launch and from the menu).
 - Journal v2 with selectors, collision-safe restore, rotation and repair.
 
-[Unreleased]: https://github.com/notmicrosoft2000-cmd/gnu-sorter/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/notmicrosoft2000-cmd/gnu-sorter/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/notmicrosoft2000-cmd/gnu-sorter/releases/tag/v3.0.0
 [2.5.0]: https://github.com/notmicrosoft2000-cmd/gnu-sorter/releases/tag/v2.5.0

@@ -48,6 +48,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="3.0.0" date="2026-10-12">
+      <description>
+        <p>The "Tunneler" release: a six-step rule wizard, a redesigned rules
+          page, journal search with restore preview and conflict strategies,
+          configurable history retention, light/dark appearance with per-rule
+          accent colours, Flatpak packaging, and channel-aware updates.</p>
+      </description>
+    </release>
     <release version="2.5.0" date="2026-10-11">
       <description>
         <p>Journal search, restore preview, the rule wizard and the redesigned

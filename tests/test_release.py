@@ -6,6 +6,7 @@ the pure functions only — nothing here touches git or the working tree.
 
 import importlib.util
 import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -17,6 +18,26 @@ _spec = importlib.util.spec_from_file_location(
     "gs_release", ROOT / "tools" / "release.py")
 release = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(release)
+
+
+def _on_indev_trunk() -> bool:
+    """True when the working copy is the ``main`` (indev) trunk.
+
+    CI exports ``GITHUB_REF``; local runs fall back to the checked-out branch.
+    Release tags and pull-request merge refs are not the trunk, so the guard
+    below must not fire there — a tagged build legitimately carries its channel.
+    """
+    ref = os.environ.get("GITHUB_REF")
+    if ref:
+        return ref == "refs/heads/main"
+    try:
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return False
+    return branch == "main"
 
 
 class VersionModelTests(unittest.TestCase):
@@ -51,7 +72,10 @@ class VersionModelTests(unittest.TestCase):
         self.assertEqual(release.cut("3.0.0rc2", "release"), "3.0.0")
 
     def test_repo_version_is_indev(self):
-        # main is the indev trunk until a channel is cut.
+        # main is the indev trunk; a release branch or tag legitimately carries
+        # a non-indev channel, so only guard the trunk itself.
+        if not _on_indev_trunk():
+            self.skipTest("not on the indev trunk (main)")
         self.assertEqual(release.parse(release.read_version())[3], "indev")
 
 

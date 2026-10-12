@@ -95,10 +95,18 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # The build runs on the released tag, i.e. a detached HEAD, so carry
+          # the generated repository over to main and commit it there.
+          rm -rf /tmp/flatpak-out
+          cp -r docs/flatpak /tmp/flatpak-out
+          git fetch origin main
+          git checkout -B main origin/main
+          rm -rf docs/flatpak
+          cp -r /tmp/flatpak-out docs/flatpak
           git add docs/flatpak
           if git diff --cached --quiet; then
             echo "No repository changes to publish."
           else
             git commit -m "Publish Flatpak repository ${GITHUB_REF_NAME}"
-            git push
+            git push origin main
           fi
