@@ -4,8 +4,10 @@ name: Flatpak (Linux)
 # Pages at https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/.
 #
 # The site itself is served from docs/ on main, so the flatpak repo is written
-# to docs/flatpak/ and committed back. Trigger it by publishing a GitHub
-# release (see RELEASING.md) or manually from the Actions tab.
+# to docs/flatpak/ and committed back. It runs when a `v*` tag is pushed (the
+# tag is pushed by a user/CLI, so unlike a GITHUB_TOKEN-created release it does
+# fire workflows), when a release is published, or manually from the Actions
+# tab.
 #
 # Optional signing: add a repository GPG key as the secrets
 # FLATPAK_GPG_PRIVATE_KEY (ASCII-armoured) and FLATPAK_GPG_KEY_ID. Without them
@@ -13,6 +15,9 @@ name: Flatpak (Linux)
 # `flatpak remote-add --no-gpg-verify ...` (see PACKAGING.md).
 
 on:
+  push:
+    tags:
+      - 'v*'
   release:
     types: [published]
   workflow_dispatch:
