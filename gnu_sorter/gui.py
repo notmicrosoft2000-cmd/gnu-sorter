@@ -282,6 +282,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.cfg = cfg
         self.sorter = sorter
         self._loading = False
+        self._sweeping = False
         self._ctx_pop: Gtk.PopoverMenu | None = None
         self.current_root: str | None = None
 
@@ -1429,6 +1430,12 @@ class MainWindow(Adw.ApplicationWindow):
             self.sort_spinner.stop()
 
     def on_sort_now(self, _btn):
+        # "Sort Now" is also reachable from the app action, the Ctrl+N
+        # accelerator and the tray; guard against overlapping sweeps racing on
+        # shutil.move and the journal.
+        if self._sweeping:
+            return
+        self._sweeping = True
         self._set_sorting(True)
         self.toast("Sorting…")
 
@@ -1443,6 +1450,7 @@ class MainWindow(Adw.ApplicationWindow):
         threading.Thread(target=work, daemon=True).start()
 
     def _on_sweep_done(self, stats):
+        self._sweeping = False
         self._set_sorting(False)
         self.refresh_activity()
         verb = "Sorted" if stats["moved"] else "Nothing to sort"
@@ -1454,6 +1462,7 @@ class MainWindow(Adw.ApplicationWindow):
         return False
 
     def _on_sweep_failed(self, message):
+        self._sweeping = False
         self._set_sorting(False)
         self.toast(f"Sorting failed: {message}")
         return False
@@ -1733,16 +1742,22 @@ class RuleWizard:
         return rule
 
     def _regex_ok(self) -> bool:
-        if self.state["name_mode"] != "regex":
-            return True
-        pattern = self._name_pattern()
-        if not pattern:
-            return True
-        try:
-            re.compile(pattern)
-            return True
-        except re.error:
-            return False
+        """True when the name pattern (regex mode) and the exclusion are valid.
+
+        The name pattern is escaped for the literal modes, so only ``regex``
+        mode can be malformed; the exclusion is always taken verbatim.
+        """
+        patterns = [self.state.get("exclude") or ""]
+        if self.state["name_mode"] == "regex":
+            patterns.append(self._name_pattern() or "")
+        for pattern in patterns:
+            if not pattern:
+                continue
+            try:
+                re.compile(pattern)
+            except re.error:
+                return False
+        return True
 
     @staticmethod
     def _has_matcher(rule: dict) -> bool:
@@ -2443,7 +2458,7 @@ class RuleWizard:
             self.win.toast("Add at least one extension or a name match")
             return
         if not self._regex_ok():
-            self.win.toast("That regex isn't valid")
+            self.win.toast("That name or exclusion regex isn't valid")
             return
         self.win._ensure_custom(self.root)
         rules, _ = self.cfg.rules_for(self.root)

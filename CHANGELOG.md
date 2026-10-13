@@ -24,6 +24,13 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
 - A busy spinner and "Sorting…" label on the Sort Now button during a sweep.
 - AppStream `<branding>` colours, so software centres tint Funnel green.
 
+### Fixed
+- The wizard's **"Never match names matching"** field is now validated: an
+  invalid exclusion regex is rejected up front instead of being saved and then
+  silently ignored by the engine.
+- **"Sort Now"** can no longer run two sweeps at once when triggered from the
+  menu, the `Ctrl+N` shortcut or the tray while a sweep is already running.
+
 ### Changed
 - **Rebuilt the app shell**: the hand-rolled sidebar is gone. Folders, Rules
   and Activity are now header tabs (`Adw.ViewSwitcher`), collapsing to a bottom
