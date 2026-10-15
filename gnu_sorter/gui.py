@@ -30,7 +30,8 @@ from . import (APP_ID, APP_NAME, CREATOR, ISSUES, REPO, WEBSITE,  # noqa: E402
                __version__)
 from .config import (Config, PRESETS,  # noqa: E402
                      describe_rule, duplicate_rule, move_rule,
-                     name_matcher_regex, normalize_rule, safe_category_name)
+                     name_matcher_regex, normalize_rule, rule_overlaps,
+                     safe_category_name)
 from .engine import Sorter, expand, fmt  # noqa: E402
 from . import service  # noqa: E402
 
@@ -404,6 +405,12 @@ class MainWindow(Adw.ApplicationWindow):
             act = Gio.SimpleAction.new(f"preset-{i}", None)
             act.connect("activate", lambda *_a, idx=i: self.on_preset(idx))
             self.add_action(act)
+        for name, handler in (("import-rules", self.on_import_rules),
+                              ("export-rules", self.on_export_rules),
+                              ("reset-rules", self.on_reset_rules)):
+            act = Gio.SimpleAction.new(name, None)
+            act.connect("activate", lambda *_a, h=handler: h())
+            self.add_action(act)
         for name, accel in (("win.preferences", "<Control>comma"),
                             ("win.shortcuts", "<Control>question"),
                             ("app.sort-now", "<Control>n")):
@@ -626,7 +633,7 @@ class MainWindow(Adw.ApplicationWindow):
                        outer.set_margin_start, outer.set_margin_end):
             setter(18)
 
-        # --- header: title, search, primary action, overflow menu
+        # --- header: title, search, primary action (+ presets), overflow menu
         head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         head.append(_heading("Rules"))
         spacer = Gtk.Box()
@@ -637,7 +644,14 @@ class MainWindow(Adw.ApplicationWindow):
         self.rules_search.connect("search-changed", self._on_rule_search)
         head.append(self.rules_search)
 
-        self.add_rule_btn = Gtk.Button(label="Add Rule")
+        # "Add Rule" with the presets tucked into its dropdown half.
+        self.add_rule_btn = Adw.SplitButton()
+        self.add_rule_btn.set_label("Add Rule")
+        self.add_rule_btn.set_icon_name("list-add-symbolic")
+        presets_menu = Gio.Menu()
+        for i, (label, _rules) in enumerate(PRESETS):
+            presets_menu.append(label, f"win.preset-{i}")
+        self.add_rule_btn.set_menu_model(presets_menu)
         self.add_rule_btn.add_css_class("suggested-action")
         self.add_rule_btn.add_css_class("pill")
         self.add_rule_btn.connect("clicked", self.on_add_rule)
@@ -645,10 +659,9 @@ class MainWindow(Adw.ApplicationWindow):
 
         rules_menu = Gio.Menu()
         rules_menu.append("Advanced rule editor…", "win.advanced")
-        presets_menu = Gio.Menu()
-        for i, (label, _rules) in enumerate(PRESETS):
-            presets_menu.append(label, f"win.preset-{i}")
-        rules_menu.append_submenu("Apply preset", presets_menu)
+        rules_menu.append("Import rules…", "win.import-rules")
+        rules_menu.append("Export rules…", "win.export-rules")
+        rules_menu.append("Reset to defaults", "win.reset-rules")
         head.append(Gtk.MenuButton(menu_model=rules_menu,
                                    icon_name="view-more-symbolic"))
         outer.append(head)
@@ -673,13 +686,20 @@ class MainWindow(Adw.ApplicationWindow):
         right.append(inherit_box)
 
         hint = Gtk.Label(
-            label="First matching rule wins \u2014 reorder with \u25b2 \u25bc.",
+            label="Rules are checked top to bottom \u2014 the first match "
+                  "wins. Reorder with \u25b2 \u25bc or by dragging.",
             xalign=0)
+        hint.set_wrap(True)
         hint.add_css_class("dim-label")
         hint.add_css_class("caption")
         right.append(hint)
 
+        self.rules_warnings = Adw.Banner()
+        self.rules_warnings.set_revealed(False)
+        right.append(self.rules_warnings)
+
         self.rules_list = _listbox()
+        self._attach_drop_target()
         right.append(_scroll(self.rules_list))
 
         tester_box = _listbox()
@@ -689,6 +709,18 @@ class MainWindow(Adw.ApplicationWindow):
         self.rules_tester_result = Adw.ActionRow(title="\u2026",
                                                  subtitle="Type a name to preview")
         tester_box.append(self.rules_tester_result)
+
+        preview_row = Adw.ActionRow(title="Preview this folder",
+                                    subtitle="Count what would move")
+        self.rules_preview_btn = Gtk.Button(label="Preview")
+        self.rules_preview_btn.add_css_class("flat")
+        self.rules_preview_btn.set_valign(Gtk.Align.CENTER)
+        self.rules_preview_btn.connect("clicked", self._on_preview)
+        preview_row.add_suffix(self.rules_preview_btn)
+        tester_box.append(preview_row)
+        self.rules_preview_result = Adw.ActionRow(title="", visible=False)
+        self.rules_preview_result.set_subtitle_lines(4)
+        tester_box.append(self.rules_preview_result)
         right.append(tester_box)
 
         paned.set_end_child(right)
@@ -765,6 +797,8 @@ class MainWindow(Adw.ApplicationWindow):
             if root is None:
                 self.rules_inherit.set_active(True)
                 self.rules_inherit.set_subtitle("Add a folder to edit its rules")
+                self._update_warnings([])
+                self.rules_preview_result.set_visible(False)
                 return
             rules, custom = self.cfg.rules_for(root)
             self.rules_inherit.set_active(not custom)
@@ -788,6 +822,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.rules_list.append(
                 Adw.ActionRow(title="No rules yet",
                               subtitle="Use \u201cAdd Rule\u201d to create one"))
+        self._update_warnings(rules)
+        self.rules_preview_result.set_visible(False)
         self._on_rule_search(self.rules_search)
 
     def _rule_row(self, cat: dict, template: set, index: int,
@@ -836,6 +872,7 @@ class MainWindow(Adw.ApplicationWindow):
         row.add_suffix(up)
         row.add_suffix(down)
         row.add_suffix(self._rule_menu(cat))
+        self._attach_drag(row, name)
         return row
 
     def _rule_menu(self, cat: dict) -> Gtk.MenuButton:
@@ -849,6 +886,8 @@ class MainWindow(Adw.ApplicationWindow):
             setter(6)
         for label, callback in (("Edit\u2026", self._edit_rule),
                                 ("Duplicate", self._duplicate_rule),
+                                ("Move up", self._move_up_menu),
+                                ("Move down", self._move_down_menu),
                                 ("Remove", self._delete_rule)):
             btn = Gtk.Button(label=label)
             btn.add_css_class("flat")
@@ -859,9 +898,210 @@ class MainWindow(Adw.ApplicationWindow):
         menu.set_popover(pop)
         return menu
 
+    def _move_up_menu(self, _btn, cat: dict):
+        self._move_rule(_btn, cat, -1)
+
+    def _move_down_menu(self, _btn, cat: dict):
+        self._move_rule(_btn, cat, +1)
+
     def _pop_action(self, _btn, pop, callback, cat):
         pop.popdown()
         callback(_btn, cat)
+
+    # -- drag to reorder -------------------------------------------------
+
+    def _attach_drop_target(self):
+        """Let the rules list accept dragged rows (see ``_attach_drag``)."""
+        try:
+            target = Gtk.DropTarget.new(GObject.TYPE_STRING,
+                                        Gdk.DragAction.MOVE)
+        except Exception:
+            return
+        target.connect("drop", self._on_rule_drop)
+        self.rules_list.add_controller(target)
+
+    def _attach_drag(self, row: Gtk.Widget, name: str):
+        """Make one rule row draggable. Best-effort: ▲▼ always work too."""
+        try:
+            source = Gtk.DragSource.new()
+            source.set_actions(Gdk.DragAction.MOVE)
+            source.connect("prepare", self._on_drag_prepare, name)
+        except Exception:
+            return
+        try:
+            row.add_controller(source)
+        except Exception:
+            pass
+
+    def _on_drag_prepare(self, _source, _x, _y, name: str):
+        try:
+            value = GObject.Value()
+            value.init(GObject.TYPE_STRING)
+            value.set_string(name)
+            return Gdk.ContentProvider.new_for_value(value)
+        except Exception:
+            return None
+
+    def _on_rule_drop(self, _target, value, _x, y):
+        root = self.current_root
+        if not root or not isinstance(value, str):
+            return False
+        rules, _ = self.cfg.rules_for(root)
+        names = [c.get("name") for c in rules]
+        if value not in names:
+            return False
+        row = self.rules_list.get_row_at_y(int(y))
+        target = row.get_index() if row is not None else len(rules) - 1
+        self._save_rules(root, move_rule(rules, value, target))
+        return True
+
+    # -- overlap warnings / preview --------------------------------------
+
+    def _update_warnings(self, rules: list[dict]):
+        banner = getattr(self, "rules_warnings", None)
+        if banner is None:
+            return
+        try:
+            warnings = rule_overlaps(rules)
+        except Exception:
+            warnings = []
+        if not warnings:
+            banner.set_revealed(False)
+            return
+        first = warnings[0][1]
+        text = (first if len(warnings) == 1
+                else f"{len(warnings)} rules need a look \u2014 {first}")
+        banner.set_title(text)
+        banner.set_revealed(True)
+
+    def _on_preview(self, _btn):
+        root = self.current_root
+        if not root:
+            self.toast("Pick a folder first")
+            return
+        rules, _ = self.cfg.rules_for(root)
+        try:
+            plan = self.sorter.preview_plan([expand(root)], rules=rules)
+        except Exception as exc:
+            self.toast(f"Preview failed: {exc}")
+            return
+        if not plan:
+            text = "Nothing to sort in this folder right now"
+        else:
+            ordered = sorted(plan.items(), key=lambda kv: (-kv[1], kv[0]))
+            parts = [f"{n} \u2192 {dest}" for dest, n in ordered[:8]]
+            if len(ordered) > len(parts):
+                parts.append("\u2026")
+            text = "  \u00b7  ".join(parts)
+        self.rules_preview_result.set_title(text)
+        self.rules_preview_result.set_visible(True)
+
+    # -- import / export / reset -----------------------------------------
+
+    def on_import_rules(self):
+        dialog = Gtk.FileDialog()
+        dialog.set_title("Import rules")
+        dialog.open(self, None, self._import_finish)
+
+    def _import_finish(self, dialog, result, _data=None):
+        try:
+            gfile = dialog.open_finish(result)
+        except GLib.Error:
+            return
+        if gfile is None or gfile.get_path() is None:
+            return
+        try:
+            with open(gfile.get_path(), encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, ValueError) as exc:
+            self.toast(f"Import failed: {exc}")
+            return
+        if isinstance(data, dict) and isinstance(data.get("rules"), list):
+            data = data["rules"]
+        if not isinstance(data, list):
+            self.toast("That file does not contain a list of rules")
+            return
+        imported = [r for r in (normalize_rule(item) for item in data)
+                    if r is not None]
+        if not imported:
+            self.toast("No usable rules found in that file")
+            return
+        alert = Adw.AlertDialog(
+            heading="Import rules",
+            body=f"{len(imported)} rule(s) found. Replace this folder\u2019s "
+                 "rules, or append them (same-named rules are overwritten)?")
+        alert.add_response("cancel", "Cancel")
+        alert.add_response("append", "Append")
+        alert.add_response("replace", "Replace")
+        alert.set_default_response("append")
+        alert.set_close_response("cancel")
+        alert.choose(self, None, self._import_choice, imported)
+
+    def _import_choice(self, dialog, result, imported):
+        try:
+            response = dialog.choose_finish(result)
+        except GLib.Error:
+            return
+        root = self.current_root
+        if root is None:
+            self.toast("Pick a folder before importing")
+            return
+        if response not in ("append", "replace"):
+            return
+        self._ensure_custom(root)
+        existing, _ = self.cfg.rules_for(root)
+        if response == "replace":
+            merged = list(imported)
+        else:
+            merged = list(existing)
+            for rule in imported:
+                name = rule.get("name")
+                for idx, current in enumerate(merged):
+                    if current.get("name") == name:
+                        merged[idx] = rule
+                        break
+                else:
+                    merged.append(rule)
+        self._save_rules(root, merged)
+        self.toast(f"Imported {len(imported)} rule(s)")
+
+    def on_export_rules(self):
+        rules, _ = self.cfg.rules_for(self.current_root) \
+            if self.current_root else (self.cfg.load_rules(), True)
+        dialog = Gtk.FileDialog()
+        dialog.set_title("Export rules")
+        dialog.set_initial_name("funnel-rules.json")
+        dialog.save(self, None, self._export_finish, rules)
+
+    def _export_finish(self, dialog, result, rules):
+        try:
+            gfile = dialog.save_finish(result)
+        except GLib.Error:
+            return
+        if gfile is None or gfile.get_path() is None:
+            return
+        try:
+            with open(gfile.get_path(), "w", encoding="utf-8") as fh:
+                json.dump(rules, fh, indent=2)
+                fh.write("\n")
+        except OSError as exc:
+            self.toast(f"Export failed: {exc}")
+            return
+        self.toast(f"Exported {len(rules)} rule(s)")
+
+    def on_reset_rules(self):
+        root = self.current_root
+        if not root:
+            self.toast("Pick a folder first")
+            return
+        if not self.cfg.is_custom(root):
+            self.toast("Already using the default rules")
+            return
+        self.cfg.attach_rules(root)
+        self.sorter.reload()
+        self.refresh_rules_folders()
+        self.refresh_folders()
+        self.toast("Reverted to the default rules")
 
     def _on_rule_enabled(self, switch, _param, cat: dict):
         if self._loading or not self.current_root:

@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from gnu_sorter import engine  # noqa: E402
 from gnu_sorter.config import (Config, describe_rule,  # noqa: E402
                                describe_rule_details, humanize_regex,
-                               normalize_rule)
+                               normalize_rule, rule_overlaps)
 from gnu_sorter.engine import Sorter  # noqa: E402
 
 
@@ -180,6 +180,72 @@ class TestClassify(unittest.TestCase):
             rules = [{"name": "Nope", "match_mode": "all"}]
             out = sorter.classify(["a.jpg"], rules=rules)
             self.assertEqual(out["a.jpg"], "Needs-review")
+
+
+class TestRuleOverlaps(unittest.TestCase):
+    def test_duplicate_extension_warns_second_rule(self):
+        warnings = rule_overlaps([
+            {"name": "Photos", "extensions": ["jpg", "png"]},
+            {"name": "Raw", "extensions": ["jpg"]},
+        ])
+        self.assertTrue(any(name == "Raw" and ".jpg" in msg
+                            for name, msg in warnings))
+
+    def test_catch_all_shadows_following_rules(self):
+        warnings = rule_overlaps([
+            {"name": "Everything", "match_all": True},
+            {"name": "Videos", "extensions": ["mp4"]},
+        ])
+        self.assertTrue(any(name == "Videos" and "Never reached" in msg
+                            for name, msg in warnings))
+
+    def test_empty_rule_matches_nothing(self):
+        warnings = rule_overlaps([{"name": "Nope"}])
+        self.assertTrue(any(name == "Nope" and "Matches nothing" in msg
+                            for name, msg in warnings))
+
+    def test_disabled_rules_are_ignored(self):
+        warnings = rule_overlaps([
+            {"name": "Off", "extensions": ["jpg"], "enabled": False},
+            {"name": "Photos", "extensions": ["jpg"]},
+        ])
+        self.assertEqual(warnings, [])
+
+    def test_clean_ruleset_has_no_warnings(self):
+        warnings = rule_overlaps([
+            {"name": "Photos", "extensions": ["jpg"]},
+            {"name": "Videos", "extensions": ["mp4"]},
+        ])
+        self.assertEqual(warnings, [])
+
+
+class TestPreviewPlan(unittest.TestCase):
+    def test_counts_by_destination(self):
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            sorter, cfg = _sorter(tmp)
+            root = tmp / "root"
+            root.mkdir()
+            cfg.save_roots([{"path": str(root), "enabled": True}])
+            (root / "a.jpg").write_bytes(b"x" * 10)
+            (root / "b.jpg").write_bytes(b"y" * 10)
+            (root / "c.pdf").write_bytes(b"z" * 10)
+            (root / ".hidden.jpg").write_bytes(b"h")
+            plan = sorter.preview_plan()
+            self.assertEqual(plan.get("Photos"), 2)
+            self.assertEqual(plan.get("Documents"), 1)
+            self.assertEqual(sum(plan.values()), 3)   # hidden file skipped
+
+    def test_uses_given_rules(self):
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            sorter, _ = _sorter(tmp)
+            root = tmp / "root"
+            root.mkdir()
+            (root / "a.jpg").write_bytes(b"x" * 10)
+            plan = sorter.preview_plan(
+                roots=[root], rules=[{"name": "Pics", "extensions": ["jpg"]}])
+            self.assertEqual(plan.get("Pics"), 1)
 
 
 class TestRuleCounts(unittest.TestCase):

@@ -23,6 +23,18 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
 - **Keyboard shortcuts dialog** (`Ctrl+?`), plus `Ctrl+N` for Sort Now.
 - A busy spinner and "Sorting…" label on the Sort Now button during a sweep.
 - AppStream `<branding>` colours, so software centres tint Funnel green.
+- **Rules page redesign**: one unified, priority-ordered list (no more separate
+  sections), with **drag-and-drop reordering** (and ▲▼ in each rule's `⋯` menu
+  for the keyboard); the presets moved into the **Add Rule** split button, and
+  the page's `⋯` menu now holds the advanced editor plus the new import/export.
+- **Overlap warnings**: rules that can never match — a duplicated extension, or
+  anything below a catch-all — now raise a banner that names the rule and says
+  why, instead of silently doing nothing.
+- **Preview a folder** from the rules page: counts how many top-level files
+  each rule would move, before you press Sort Now.
+- **Rule import & export** (plain JSON) from the rules page, sharing the same
+  format as the advanced editor; importing asks whether to *Replace* or
+  *Append* (same-named rules are overwritten).
 
 ### Fixed
 - The wizard's **"Never match names matching"** field is now validated: an

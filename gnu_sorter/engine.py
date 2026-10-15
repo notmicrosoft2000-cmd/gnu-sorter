@@ -566,6 +566,44 @@ class Sorter:
         return {name: self.categorize(name, rules=compiled)
                 for name in filenames}
 
+    def preview_plan(self, roots: list[Path] | None = None,
+                     rules: list[dict] | None = None,
+                     limit: int = 5000) -> dict[str, int]:
+        """Read-only tally of where a folder's files *would* go.
+
+        Destination folder → number of eligible top-level files. Mirrors the
+        sweep's eligibility rule (top-level files only; hidden, symlinked and
+        in-progress names skipped) but never touches disk, and unlike
+        :meth:`sweep` it reports a per-destination breakdown. ``rules`` is a
+        raw ruleset (compiled here) or None for the sorter's own rules.
+        """
+        roots = roots if roots is not None else self.roots()
+        compiled = self._compile(rules) if rules is not None else None
+        counts: dict[str, int] = {}
+        seen = 0
+        for root in roots:
+            if not root.is_dir():
+                continue
+            try:
+                entries = sorted(root.iterdir(), key=lambda p: p.name.lower())
+            except OSError:
+                continue
+            for entry in entries:
+                if seen >= limit:
+                    break
+                try:
+                    if not entry.is_file() or entry.is_symlink():
+                        continue
+                    stat = entry.stat()
+                except OSError:
+                    continue
+                if entry.name.startswith(".") or looks_in_progress(entry.name):
+                    continue
+                dest = self.categorize(entry.name, rules=compiled, stat=stat)
+                counts[dest] = counts.get(dest, 0) + 1
+                seen += 1
+        return counts
+
     # -- moving ----------------------------------------------------------
     def _destination(self, root: Path, category: str,
                      quiet: bool = False) -> tuple[Path, str]:

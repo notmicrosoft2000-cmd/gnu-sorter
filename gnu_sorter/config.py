@@ -303,6 +303,45 @@ def rule_has_positive(rule: dict) -> bool:
                 or rule.get("match_name_regex"))
 
 
+def rule_overlaps(rules: list[dict]) -> list[tuple[str | None, str]]:
+    """Non-fatal warnings about how an ordered ruleset behaves.
+
+    Returns ``(rule_name_or_None, message)`` pairs for the rules page. Rules
+    are evaluated top to bottom and the first match wins, so a rule can be
+    *unreachable* when an earlier one already claims everything it matches:
+    a duplicated extension, or any rule sitting below a catch-all
+    (``match_all``). A rule with no matchers at all can never match.
+    """
+    warnings: list[tuple[str | None, str]] = []
+    claimed: dict[str, str] = {}
+    shadowed_from: str | None = None
+    for rule in rules:
+        name = rule.get("name") or "?"
+        if rule.get("enabled") is False:
+            continue
+        if shadowed_from is not None:
+            warnings.append(
+                (name, f"Never reached — “{shadowed_from}” above it matches "
+                       f"every file."))
+            continue
+        if not rule_has_positive(rule):
+            warnings.append(
+                (name, "Matches nothing — add an extension or a name pattern."))
+        for ext in rule.get("extensions") or []:
+            key = str(ext).strip().lower().lstrip(".")
+            if not key:
+                continue
+            if key in claimed:
+                warnings.append(
+                    (name, f".{key} is already claimed by “{claimed[key]}”, "
+                           f"which comes first."))
+            else:
+                claimed[key] = name
+        if rule.get("match_all"):
+            shadowed_from = name
+    return warnings
+
+
 # ------------------------------------------------------- plain english -----
 #
 # A tiny, shared describer that turns a rule dict into friendly prose. The
