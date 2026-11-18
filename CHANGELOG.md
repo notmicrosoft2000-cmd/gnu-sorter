@@ -11,15 +11,15 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
 
 ### Added
 - **Green brand & accent system**: the app now wears Funnel's colour, taken
-  from the project website (`#a3e635` on dark, `#4d7c0f` on light), applied to
+  from the project website (`#a3e635` on dark, `#466f0d` on light), applied to
   buttons, switches, selections and focus rings via an app stylesheet
   (`gnu_sorter/brand.css`).
 - **Preferences → Accent colour**: follow the desktop, or pick a Funnel colour
   (green, lime, teal, cyan, blue, purple, pink, red, orange, yellow, slate).
-  Defaults to **Funnel green** and re-tints automatically when the desktop
+  Defaults to **Green** and re-tints automatically when the desktop
   switches between light and dark.
 - **Empty states**: "No folders yet" and "Nothing sorted yet" now show a
-  brand-tinted, gently floating illustration with an inline primary action.
+  brand-tinted illustration with an inline primary action.
 - **Keyboard shortcuts dialog** (`Ctrl+?`), plus `Ctrl+N` for Sort Now.
 - A busy spinner and "Sorting…" label on the Sort Now button during a sweep.
 - AppStream `<branding>` colours, so software centres tint Funnel green.
@@ -42,6 +42,9 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
   silently ignored by the engine.
 - **"Sort Now"** can no longer run two sweeps at once when triggered from the
   menu, the `Ctrl+N` shortcut or the tray while a sweep is already running.
+- The **sort preview** on the wizard's last step painted a fixed lime whichever
+  accent was selected. It now takes its colours from the active accent, using
+  the light or dark variant that matches the current colour scheme.
 
 ### Changed
 - **Rebuilt the app shell**: the hand-rolled sidebar is gone. Folders, Rules
@@ -53,6 +56,13 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
   size, the ICO and the website images) from `data/icons/gnu-sorter.svg`.
 - The wizard's "files flow into the folder" animation now flows into a green
   folder.
+- **Visual restyle**: the app chrome now matches the project website's quiet
+  technical-desk look. Hairline rules replace the soft accent glow on hover,
+  small structural labels (section eyebrows, row indices, row metadata) are set
+  in monospace, and hand-painted elements use tight corners. The empty-state
+  illustration no longer drifts.
+- **Project website rebuilt** on the same visual system, with self-hosted Fira
+  Sans and copy that reads like a manual instead of a landing page.
 
 ## [3.0.0] - 2026-10-12 "Tunneler"
 

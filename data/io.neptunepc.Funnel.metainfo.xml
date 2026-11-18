@@ -11,14 +11,14 @@
 
   <description>
     <p>
-      Funnel watches the folders you choose and moves new files into tidy,
-      rule-based subfolders. Point it at Downloads and your screenshots land in
-      Photos, PDFs in Documents and archives in Archives — automatically.
+      Funnel watches the folders you choose and moves new files into category
+      subfolders you define. Point it at Downloads and screenshots land in
+      Photos, PDFs in Documents, archives in Archives.
     </p>
     <p>
-      Every move is journaled and reversible, rules are editable in a visual
-      editor with a plain-English preview, and the whole thing stays quietly
-      out of your way in the background.
+      Every move is written to a journal you can undo, rules are edited in a
+      visual editor with a plain-English preview, and the watcher runs in the
+      background.
     </p>
   </description>
 
@@ -46,7 +46,7 @@
   </keywords>
 
   <branding>
-    <color type="primary" scheme_preference="light">#4d7c0f</color>
+    <color type="primary" scheme_preference="light">#466f0d</color>
     <color type="primary" scheme_preference="dark">#a3e635</color>
   </branding>
 

@@ -4,30 +4,48 @@
  * apply_color_scheme in gui.py) so the user can follow the desktop or pick a
  * Funnel colour. Everything else here is cosmetic polish on top of
  * libadwaita, and every rule is safe to drop if a future libadwaita adds its
- * own equivalent. */
+ * own equivalent.
+ *
+ * The house style is a quiet technical desk: hairline rules instead of
+ * shadows, monospace for small structural labels, a single accent, tight
+ * corners. */
 
-/* The brand mark and hero icons use the accent. */
+/* The brand mark uses the accent. */
 .funnel-brand {
   color: @accent_color;
 }
 
-/* Interactive cards (wizard recipe tiles, ...) lift softly on hover. */
+/* Small structural labels — section eyebrows, field captions, row metadata
+ * — speak in monospace, the way the project's own plates annotate their
+ * parts. */
+.funnel-eyebrow {
+  font-family: monospace;
+  font-size: 0.78em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: alpha(currentColor, 0.72);
+}
+
+/* A row's position number, in the accent. */
+.funnel-index {
+  font-family: monospace;
+  letter-spacing: 0.08em;
+  color: @accent_color;
+}
+
+/* Interactive cards (wizard recipe tiles, ...) sit on a hairline rule and
+ * take a flat accent wash on hover — no lift, no glow. */
 .funnel-card {
-  transition: box-shadow 160ms ease;
+  border: 1px solid alpha(currentColor, 0.14);
+  border-radius: 4px;
+  transition: border-color 140ms ease, background-color 140ms ease;
 }
 .funnel-card:hover {
-  box-shadow: 0 10px 26px -14px alpha(@accent_color, 0.55);
+  border-color: alpha(@accent_color, 0.5);
+  background-color: alpha(@accent_color, 0.08);
 }
 
-/* Empty-state illustrations use the brand colour and drift gently, so an
- * empty page still feels alive. */
+/* Empty-state illustrations use the brand colour and hold still. */
 .funnel-empty image {
   color: @accent_color;
-  animation: funnel-float 4.5s ease-in-out infinite;
-}
-
-@keyframes funnel-float {
-  0%   { transform: translateY(0); }
-  50%  { transform: translateY(-6px); }
-  100% { transform: translateY(0); }
 }

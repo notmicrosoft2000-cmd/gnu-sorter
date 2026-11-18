@@ -321,12 +321,12 @@ def rule_overlaps(rules: list[dict]) -> list[tuple[str | None, str]]:
             continue
         if shadowed_from is not None:
             warnings.append(
-                (name, f"Never reached — “{shadowed_from}” above it matches "
+                (name, f"Never reached, “{shadowed_from}” above it matches "
                        f"every file."))
             continue
         if not rule_has_positive(rule):
             warnings.append(
-                (name, "Matches nothing — add an extension or a name pattern."))
+                (name, "Matches nothing. Add an extension or a name pattern."))
         for ext in rule.get("extensions") or []:
             key = str(ext).strip().lower().lstrip(".")
             if not key:

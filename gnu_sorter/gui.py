@@ -80,9 +80,9 @@ _SCHEMES = {"default": Adw.ColorScheme.DEFAULT,
 #
 # Every accent ships a light and a dark variant so contrast holds on either
 # background. The default mirrors the project website, which uses a lively
-# lime on dark (#a3e635) and a deeper shade on light (#4d7c0f).
+# lime on dark (#a3e635) and a deeper olive on light (#466f0d).
 ACCENTS: dict[str, dict[str, tuple[str, str]]] = {
-    "green":  {"light": ("#4d7c0f", "#ffffff"), "dark": ("#a3e635", "#0b0d08")},
+    "green":  {"light": ("#466f0d", "#ffffff"), "dark": ("#a3e635", "#0b0d08")},
     "lime":   {"light": ("#65a30d", "#ffffff"), "dark": ("#bef264", "#0b0d08")},
     "teal":   {"light": ("#0f766e", "#ffffff"), "dark": ("#2dd4bf", "#04201d")},
     "cyan":   {"light": ("#0e7490", "#ffffff"), "dark": ("#67e8f9", "#04222b")},
@@ -98,7 +98,7 @@ ACCENTS: dict[str, dict[str, tuple[str, str]]] = {
 # Menu order: follow the desktop, then the brand green, then the rest.
 ACCENT_CHOICES: list[tuple[str, str]] = [
     ("system", "Follow the desktop"),
-    ("green", "Funnel green"),
+    ("green", "Green"),
 ]
 ACCENT_CHOICES += [(key, key.capitalize()) for key in
                    ("lime", "teal", "cyan", "blue", "purple", "pink",
@@ -172,6 +172,49 @@ def apply_color_scheme(cfg: Config) -> None:
     except Exception:
         pass
     _hook_style_manager(cfg)
+
+
+def _hex_to_rgb(value: str) -> tuple[float, float, float]:
+    """A CSS hex colour as three 0..1 floats, for Cairo painting."""
+    text = str(value).lstrip("#")
+    if len(text) == 3:
+        text = "".join(ch * 2 for ch in text)
+    try:
+        return tuple(int(text[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+    except (ValueError, IndexError):
+        return (0.639, 0.902, 0.208)
+
+
+def _accent_colors(cfg: Config | None = None) -> dict:
+    """Resolve the active accent to Cairo floats so hand-painted widgets match.
+
+    Picks the light or dark variant for the active colour scheme, so a light
+    theme is never painted with the dark accent. When the accent follows the
+    desktop the resolved system colour is not exposed to the app, so the brand
+    green stands in rather than a hardcoded value.
+    """
+    scheme, accent, dark = "default", "green", False
+    if cfg is not None:
+        try:
+            settings = cfg.load_settings()
+            scheme = str(settings.get("color_scheme", "default")).lower()
+            accent = str(settings.get("accent", "green")).lower()
+        except Exception:
+            pass
+    if scheme == "dark":
+        dark = True
+    elif scheme == "light":
+        dark = False
+    else:
+        try:
+            dark = bool(Adw.StyleManager.get_default().get_dark())
+        except Exception:
+            dark = False
+    entry = ACCENTS.get(accent) or ACCENTS["green"]
+    bg, fg = entry["dark" if dark else "light"]
+    return {"bg": _hex_to_rgb(bg), "fg": _hex_to_rgb(fg),
+            "muted": (0.62, 0.64, 0.70) if dark else (0.30, 0.31, 0.36),
+            "dark": dark}
 
 
 def _heading(text: str) -> Gtk.Label:
@@ -439,13 +482,13 @@ class MainWindow(Adw.ApplicationWindow):
             current, latest, needed = updater.check()
             if not needed:
                 if notify:
-                    GLib.idle_add(self.toast, f"Up to date — version {current}")
+                    GLib.idle_add(self.toast, f"Up to date, version {current}")
                 return
             if updater.install_kind() == "flatpak":
                 # Read-only sandbox: never self-replace, just point at Flatpak.
                 GLib.idle_add(
                     self.toast,
-                    f"{latest} is available — run "
+                    f"{latest} is available. Run "
                     f"`flatpak update {updater.FLATPAK_ID}`")
                 return
             GLib.idle_add(self.toast, f"Downloading {latest}…")
@@ -539,8 +582,8 @@ class MainWindow(Adw.ApplicationWindow):
         empty = Adw.StatusPage(
             icon_name="folder-open-symbolic",
             title="No folders yet",
-            description="Add a folder and Funnel keeps it tidy — files sort "
-                        "into category folders automatically.")
+            description="Add a folder and Funnel sorts new files into category "
+                        "folders as they arrive.")
         empty.add_css_class("funnel-empty")
         empty_btn = Gtk.Button(label="Add Folder")
         empty_btn.add_css_class("pill")
@@ -842,8 +885,8 @@ class MainWindow(Adw.ApplicationWindow):
                          + " " + (cat.get("match_name_regex") or "")).lower()
 
         num = Gtk.Label(label=str(index + 1))
-        num.add_css_class("dim-label")
         num.add_css_class("caption")
+        num.add_css_class("funnel-index")
         num.set_size_request(16, -1)
         num.set_valign(Gtk.Align.CENTER)
         row.add_prefix(num)
@@ -1434,11 +1477,13 @@ class MainWindow(Adw.ApplicationWindow):
             else:
                 for r in reversed(rows):
                     src_p, dest_p = Path(r["src"]), Path(r["dest"])
-                    rule = r.get("rule") or "—"
+                    rule = r.get("rule") or "no rule"
                     row = Adw.ActionRow(
                         title=src_p.name,
                         subtitle=f"{rule} · {fmt(src_p)} → {dest_p.parent.name}/")
-                    row.add_suffix(Gtk.Label(label=r["ts"].split(" ")[-1]))
+                    stamp = Gtk.Label(label=r["ts"].split(" ")[-1])
+                    stamp.add_css_class("funnel-eyebrow")
+                    row.add_suffix(stamp)
                     self.activity_list.append(row)
                 self.activity_stack.set_visible_child_name("list")
             total = len(index)
@@ -1765,11 +1810,12 @@ class SortPreview(Gtk.DrawingArea):
     desktop's "reduce motion" setting by jumping straight to the final frame.
     """
 
-    def __init__(self, files, matched, folder):
+    def __init__(self, files, matched, folder, colors=None):
         super().__init__()
         self.files = list(files)[:8]
         self.matched = set(matched)
         self.folder = folder or "Destination"
+        self.colors = colors or _accent_colors(None)
         self.progress = 0.0
         self._tick_id = 0
         self._start = None
@@ -1822,6 +1868,7 @@ class SortPreview(Gtk.DrawingArea):
 
     def _paint(self, area, cr, width, height):
         files = self.files or ["(no files yet)"]
+        bg = self.colors["bg"]
         chip_w, chip_h, gap = 150.0, 24.0, 6.0
         top = max(6.0, (height - len(files) * (chip_h + gap)) / 2.0)
         dest_w, dest_h = 138.0, 74.0
@@ -1829,19 +1876,20 @@ class SortPreview(Gtk.DrawingArea):
         dest_y = (height - dest_h) / 2.0
 
         self._round_rect(cr, dest_x, dest_y + dest_h * 0.22,
-                         dest_w, dest_h * 0.78, 8.0)
-        cr.set_source_rgba(0.396, 0.639, 0.051, 0.95)
+                         dest_w, dest_h * 0.78, 3.0)
+        cr.set_source_rgba(bg[0], bg[1], bg[2], 0.95)
         cr.fill()
         self._round_rect(cr, dest_x + 12, dest_y, dest_w * 0.42,
-                         dest_h * 0.34, 5.0)
-        cr.set_source_rgba(0.396, 0.639, 0.051, 0.95)
+                         dest_h * 0.34, 2.0)
+        cr.set_source_rgba(bg[0], bg[1], bg[2], 0.95)
         cr.fill()
         layout = area.create_pango_layout(self.folder)
         layout.set_width(int(dest_w * Pango.SCALE))
         layout.set_alignment(Pango.Alignment.CENTER)
         layout.set_ellipsize(Pango.EllipsizeMode.END)
         cr.move_to(dest_x, dest_y + dest_h + 4)
-        cr.set_source_rgba(0.55, 0.56, 0.62, 1.0)
+        muted = self.colors["muted"]
+        cr.set_source_rgba(muted[0], muted[1], muted[2], 1.0)
         PangoCairo.show_layout(cr, layout)
 
         for i, name in enumerate(files):
@@ -1850,26 +1898,36 @@ class SortPreview(Gtk.DrawingArea):
             p = self.progress if hit else 0.0
             x = 12.0 + (dest_x + 24.0 - 12.0) * p
             y = y0 + (dest_y + dest_h / 2.0 - chip_h / 2.0 - y0) * p
-            if not hit:
-                alpha = 0.35
-            elif p > 0.85:
+            if hit and p > 0.85:
                 alpha = max(0.0, 1.0 - (p - 0.85) / 0.15)
             else:
                 alpha = 1.0
-            self._chip(area, cr, x, y, chip_w, chip_h, name, alpha)
+            self._chip(area, cr, x, y, chip_w, chip_h, name, alpha, hit)
 
-    def _chip(self, area, cr, x, y, w, h, text, alpha):
-        self._round_rect(cr, x, y, w, h, 6.0)
-        cr.set_source_rgba(0.639, 0.902, 0.208, 0.9 * alpha)
+    def _chip(self, area, cr, x, y, w, h, text, alpha, hit):
+        bg = self.colors["bg"]
+        if hit:
+            # A solid accent plate, its label in the accent's own foreground.
+            fill, fill_a = bg, 0.92 * alpha
+            edge = tuple(channel * 0.72 for channel in bg)
+            edge_a = alpha
+            ink, ink_a = self.colors["fg"], alpha
+        else:
+            # A quiet plate for files this rule leaves alone.
+            fill, fill_a = bg, 0.10
+            edge, edge_a = bg, 0.34
+            ink, ink_a = self.colors["muted"], 0.85
+        self._round_rect(cr, x, y, w, h, 3.0)
+        cr.set_source_rgba(fill[0], fill[1], fill[2], fill_a)
         cr.fill_preserve()
-        cr.set_line_width(1.2)
-        cr.set_source_rgba(0.396, 0.639, 0.051, 0.95 * alpha)
+        cr.set_line_width(1.0)
+        cr.set_source_rgba(edge[0], edge[1], edge[2], edge_a)
         cr.stroke()
         layout = area.create_pango_layout(text)
         layout.set_width(int((w - 12) * Pango.SCALE))
         layout.set_ellipsize(Pango.EllipsizeMode.END)
         cr.move_to(x + 6, y + 4)
-        cr.set_source_rgba(0.043, 0.051, 0.031, alpha)
+        cr.set_source_rgba(ink[0], ink[1], ink[2], ink_a)
         PangoCairo.show_layout(cr, layout)
 
     @staticmethod
@@ -2056,7 +2114,7 @@ class RuleWizard:
     def _field(label, widget):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         lbl = Gtk.Label(label=label, xalign=0)
-        lbl.add_css_class("heading")
+        lbl.add_css_class("funnel-eyebrow")
         box.append(lbl)
         box.append(widget)
         return box
@@ -2095,8 +2153,8 @@ class RuleWizard:
         c = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         self._pad(c)
         c.append(self._heading(WIZARD_STEPS[0]))
-        c.append(_dim(f"Starting in {self._root_name()}. Pick a starting point — "
-                      "you can change every detail next."))
+        c.append(_dim(f"Starting in {self._root_name()}. Pick a starting point. "
+                      "You can change every detail next."))
 
         flow = Gtk.FlowBox()
         flow.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -2194,7 +2252,7 @@ class RuleWizard:
         c.append(self.chip_flow)
 
         files_lbl = Gtk.Label(label="Files already here", xalign=0)
-        files_lbl.add_css_class("heading")
+        files_lbl.add_css_class("funnel-eyebrow")
         c.append(files_lbl)
         c.append(_dim("Tap a file to catch everything with that extension."))
         self.file_flow = Gtk.FlowBox()
@@ -2205,7 +2263,7 @@ class RuleWizard:
         c.append(self.file_flow)
 
         name_lbl = Gtk.Label(label="…or match the file name", xalign=0)
-        name_lbl.add_css_class("heading")
+        name_lbl.add_css_class("funnel-eyebrow")
         c.append(name_lbl)
         self.name_toggles, self.name_buttons = self._toggle_row(
             [("contains", "contains"), ("starts", "starts with"),
@@ -2284,7 +2342,7 @@ class RuleWizard:
     def _rebuild_chips(self):
         self._clear_box(self.chip_flow)
         if not self.state["exts"]:
-            self.chip_flow.append(_dim("No extensions yet — add some above."))
+            self.chip_flow.append(_dim("No extensions yet. Add some above."))
             return
         for ext in self.state["exts"]:
             btn = Gtk.Button(label="." + ext)
@@ -2297,7 +2355,7 @@ class RuleWizard:
         self._clear_box(self.file_flow)
         names = self._scan()
         if not names:
-            self.file_flow.append(_dim("This folder is empty — add extensions "
+            self.file_flow.append(_dim("This folder is empty. Add extensions "
                                        "above."))
             return
         freq = self._ext_freq()
@@ -2325,11 +2383,11 @@ class RuleWizard:
     def _refresh_count(self):
         caught, total = self._counts()
         if not self._regex_ok():
-            self.count_label.set_text("That regex isn't valid yet — check the "
+            self.count_label.set_text("That regex isn't valid yet. Check the "
                                       "name pattern.")
             return
         if not self._has_matcher(self._rule_dict()):
-            self.count_label.set_text("Nothing selected yet — pick extensions "
+            self.count_label.set_text("Nothing selected yet. Pick extensions "
                                       "or a name match.")
         elif total == 0:
             self.count_label.set_text("No files here to preview, but this rule "
@@ -2370,7 +2428,7 @@ class RuleWizard:
         c.append(self.folder_hint)
 
         tree_lbl = Gtk.Label(label="Where things live", xalign=0)
-        tree_lbl.add_css_class("heading")
+        tree_lbl.add_css_class("funnel-eyebrow")
         c.append(tree_lbl)
         self.tree_label = _dim("")
         c.append(self.tree_label)
@@ -2393,7 +2451,7 @@ class RuleWizard:
             self.folder_hint.set_text("Type a name, pick a suggestion, or "
                                       "Browse…")
         elif safe is None:
-            self.folder_hint.set_text("That name can't be used for a folder — "
+            self.folder_hint.set_text("That name can't be used for a folder. "
                                       "try letters, numbers and dashes.")
         else:
             self.folder_hint.set_text(
@@ -2470,7 +2528,7 @@ class RuleWizard:
         c = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         self._pad(c)
         c.append(self._heading(WIZARD_STEPS[3]))
-        c.append(_dim("All optional — skip anything you don't need."))
+        c.append(_dim("All optional. Skip anything you don't need."))
 
         box = _listbox()
         self.min_row = Adw.SpinRow.new_with_range(0, 1_000_000, 1)
@@ -2617,7 +2675,7 @@ class RuleWizard:
                 "caught by an earlier rule first.")
         else:
             self.priority_warn.set_text(
-                f"Good — all {len(mine)} matching files reach this rule.")
+                f"Good. All {len(mine)} matching files reach this rule.")
 
     # ---- step 6: review with proof --------------------------------------
     def _build_step6(self):
@@ -2652,7 +2710,7 @@ class RuleWizard:
         folder = rule.get("name") or "(choose a folder)"
         self.review_name.set_subtitle(f"{folder}/")
         normalized = normalize_rule(rule) or rule
-        self.review_sentence.set_subtitle(describe_rule(normalized) or "—")
+        self.review_sentence.set_subtitle(describe_rule(normalized) or "no matchers")
         idx = max(0, min(self._insert_index, len(self.existing)))
         self.review_position.set_subtitle(
             f"position {idx + 1} of {len(self.existing) + 1} (first match wins)")
@@ -2678,7 +2736,8 @@ class RuleWizard:
                 break
             if name not in shown:
                 shown.append(name)
-        self.anim_holder.append(SortPreview(shown, matched, folder))
+        self.anim_holder.append(SortPreview(shown, matched, folder,
+                                            _accent_colors(self.win.cfg)))
         if names:
             caption = (f"{len(matched)} of {len(names)} files in this folder "
                        "would sort here.")
@@ -2952,7 +3011,7 @@ class AdvancedDialog:
     @staticmethod
     def _section(text: str) -> Gtk.Label:
         lbl = Gtk.Label(label=text, xalign=0)
-        lbl.add_css_class("heading")
+        lbl.add_css_class("funnel-eyebrow")
         return lbl
 
     def open(self):
@@ -3115,7 +3174,7 @@ class RestoreDialog:
                   ("Overwrite", "overwrite"),
                   ("Skip occupied", "skip")]
     _HINT = {
-        "rename": "Occupied names get a “(1)” suffix — nothing is overwritten.",
+        "rename": "Occupied names get a “(1)” suffix. Nothing is overwritten.",
         "overwrite": "Occupied names are replaced.",
         "skip": "Occupied names are left alone (entries stay in the journal).",
     }
@@ -3216,7 +3275,7 @@ class RestoreDialog:
             elif status == "already":
                 note = "already back in place"
             elif status == "skip":
-                note = f"kept — {item['base'].name} is occupied"
+                note = f"kept, {item['base'].name} is occupied"
             else:
                 parts = [f"from {dest_p.parent.name}/"]
                 if status == "collision":
@@ -3229,7 +3288,9 @@ class RestoreDialog:
             row = Adw.ActionRow(title=src_p.name, subtitle=note)
             size = item.get("size")
             if isinstance(size, int):
-                row.add_suffix(Gtk.Label(label=_human_size(size)))
+                size_lbl = Gtk.Label(label=_human_size(size))
+                size_lbl.add_css_class("funnel-eyebrow")
+                row.add_suffix(size_lbl)
             self.listing.append(row)
 
     def open(self):
