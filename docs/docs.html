@@ -3,15 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Documentation — Funnel</title>
-  <meta name="description" content="Funnel documentation: installation, rules, per-folder configuration, presets, and command-line reference.">
-  <meta name="theme-color" content="#0a0b0d">
-  <meta property="og:title" content="Funnel Documentation">
-  <meta property="og:description" content="Installation, rules, per-folder configuration, presets, and command-line reference.">
+  <title>Funnel documentation</title>
+  <meta name="description" content="Install Funnel, write rules per folder, read the journal, restore moves, and use the command line.">
+  <meta name="theme-color" content="#12110f">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Funnel documentation">
+  <meta property="og:description" content="Installation, rules per folder, the rule wizard, the journal and the command-line reference.">
   <meta property="og:image" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/icon.png">
+  <meta property="og:url" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/docs.html">
   <link rel="icon" href="favicon.ico">
   <link rel="stylesheet" href="style.css">
   <script>
+    // Apply the saved theme before paint to avoid a flash.
     (function () {
       try {
         var stored = localStorage.getItem('gs-theme');
@@ -23,8 +26,29 @@
       } catch (e) { /* ignore */ }
     })();
   </script>
+  <noscript>
+    <style>
+      @media (max-width: 900px) {
+        .site-header .header-inner { flex-wrap: wrap; }
+        .primary-nav {
+          order: 3;
+          position: static;
+          display: flex !important;
+          flex-direction: row;
+          flex-wrap: wrap;
+          width: 100%;
+          margin: 0;
+          padding: 0 0 10px;
+          border: 0;
+          background: transparent;
+        }
+        .primary-nav a { padding: 6px 14px 6px 0; border-bottom: 0; }
+        .menu-toggle { display: none; }
+      }
+    </style>
+  </noscript>
 </head>
-<body class="docs-page">
+<body>
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="site-header">
@@ -53,7 +77,7 @@
           <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
-        <a class="btn btn-primary btn-sm" href="download.html">Get Funnel</a>
+        <a class="btn btn--line btn--sm" href="download.html">Install</a>
         <button class="icon-button menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="primary-nav">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
@@ -61,364 +85,812 @@
     </div>
   </header>
 
-  <main id="main" class="container docs-layout">
-    <aside class="docs-sidebar">
-      <p class="docs-sidebar-title">Documentation</p>
-      <nav aria-label="On this page">
-        <a href="#overview">Overview</a>
-        <a href="#requirements">Requirements</a>
-        <a href="#install">Installation</a>
-        <a href="#quickstart">Quick start</a>
-        <a href="#interface">The interface</a>
-        <a href="#rules">Rules</a>
-        <a href="#presets">Presets</a>
-        <a href="#configuration">Configuration</a>
-        <a href="#cli">CLI reference</a>
-        <a href="#uninstall">Uninstalling</a>
-        <a href="#troubleshooting">Troubleshooting</a>
-        <a href="#help">Getting help</a>
-      </nav>
-    </aside>
-
-    <article class="docs-content">
-      <p class="kicker">Documentation</p>
+  <main id="main">
+    <div class="wrap docs-head">
       <h1>Funnel documentation</h1>
-      <p class="docs-intro">
-        Funnel is an advanced file-sorting utility. You define rules that describe where files
-        should go, and it organizes the contents of the folders you choose. This page covers installing
-        it, writing rules, and driving it from the command line.
-      </p>
+      <p class="docs-intro">Funnel is a GPL-3.0 file sorter for Linux and Windows, version 3.0. It watches the folders you add and moves each file to the folder its first matching rule names. Rules are per folder, every move is journaled, and a restore can put a file back.</p>
+    </div>
 
-      <section id="overview" class="docs-section">
-        <h2>Overview</h2>
-        <p>
-          Funnel works with one or more <strong>folders</strong> and a set of <strong>rules</strong>.
-          When a file appears in a watched folder, it is matched against the rules for that folder and
-          moved into the destination the rule describes. Files that match nothing are collected in a
-          <code>Needs-review</code> folder so nothing is silently lost.
-        </p>
-        <p>
-          You can configure everything through a graphical application or the command line. Both use the
-          same configuration, so your rules behave the same either way.
-        </p>
-        <figure class="viz" data-viz="pipeline">
-          <figcaption class="viz-cap"><b>Watch &rarr; match &rarr; move &rarr; journal.</b> The full path a file takes, from arriving to being filed away.</figcaption>
-        </figure>
-      </section>
+    <div class="wrap docs-layout">
+      <aside class="docs-sidebar">
+        <p class="docs-sidebar-title">On this page</p>
+        <nav aria-label="On this page">
+          <a href="#overview">Overview</a>
+          <a href="#requirements">Requirements</a>
+          <a href="#install">Installation</a>
+          <a href="#quickstart">Quick start</a>
+          <a href="#interface">The interface</a>
+          <a href="#rules">Rules</a>
+          <a href="#per-folder">Per-folder rules</a>
+          <a href="#wizard">The rule wizard</a>
+          <a href="#presets">Presets</a>
+          <a href="#configuration">Configuration</a>
+          <a href="#journal">The journal</a>
+          <a href="#cli">CLI reference</a>
+          <a href="#uninstall">Uninstalling</a>
+          <a href="#troubleshooting">Troubleshooting</a>
+          <a href="#help">Getting help</a>
+        </nav>
+      </aside>
 
-      <section id="requirements" class="docs-section">
-        <h2>Requirements</h2>
-        <ul>
-          <li>The Linux desktop build uses GTK4 and libadwaita.</li>
-          <li>The installer places everything inside your user account; no root access is required.</li>
-          <li>A native Windows build is published from the separate <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows" target="_blank" rel="noopener">gnu-sorter-windows</a> repository. See <a href="download.html">the download page</a>.</li>
-        </ul>
-      </section>
+      <article class="docs-content docs-content--wide">
+        <section id="overview" class="docs-section">
+          <header class="sec-head">
+            <h2>Overview</h2>
+            <p class="sec-lede">One pass reads the top level of each folder, matches every file against that folder's rules, and moves it to the first destination that fits.</p>
+          </header>
+          <div class="prose">
+            <p>A sweep reads only the top level of each watched folder. Directories, symlinks and names that begin with a dot are left alone, so a folder is never sorted into itself.</p>
+            <p>Matching walks the rule list from top to bottom. A rule matches on an extension (a suffix match on the lowercased name), on a regular expression searched against the name, or on both. The first enabled rule that matches decides the destination, and its position in the list is its priority.</p>
+            <p>Files that match no rule go to <code>Needs-review</code> inside the watched folder. An existing name is not replaced: a second <code>report.pdf</code> becomes <code>report (1).pdf</code>.</p>
+          </div>
+          <div class="note">
+            <span class="note-label">Skipped</span>
+            <p>A file with an in-progress suffix is never moved: <code>.part</code>, <code>.crdownload</code>, <code>.download</code>, <code>.opdownload</code>, <code>.partial</code>, <code>.tmp</code>, <code>.filepart</code> or <code>.ytdl</code>. Everything else must be older than its settle window: 3 seconds by default, plus 4 seconds per 100 MB above 100 MB, capped at 60 extra seconds. With cautious downloads on (the default), the sweep then samples each file twice, 0.5 seconds apart, and holds it if the size or modification time changed. The sweep reports these files as waiting.</p>
+          </div>
+        </section>
 
-      <section id="install" class="docs-section">
-        <h2>Installation</h2>
-        <p>
-          The quickest way installs from a single command: it downloads the installer script,
-          clones the repository, and runs <code>install.sh</code> for your user account.
-          See the <a href="download.html">download page</a> for both platform options.
-        </p>
-        <div class="code-block">
-          <button class="copy-btn" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash" aria-label="Copy one-line install command">Copy</button>
-          <pre><code>curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash</code></pre>
-        </div>
-        <p class="tiny">Add <code>--service</code> to enable background watching on login:
-          <code>curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash -s -- --service</code>
-        </p>
-        <p>To install by hand instead:</p>
-        <ol class="docs-steps">
-          <li>
-            <p>Clone the repository and enter it.</p>
-            <div class="code-block">
-              <button class="copy-btn" type="button" data-copy="git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git &amp;&amp; cd gnu-sorter" aria-label="Copy clone command">Copy</button>
-              <pre><code>git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git &amp;&amp; cd gnu-sorter</code></pre>
+        <section id="requirements" class="docs-section">
+          <header class="sec-head">
+            <h2>Requirements</h2>
+            <p class="sec-lede">The Flatpak carries its own runtime. The user-local install runs from the source tree and uses the GTK4 stack already on the system.</p>
+          </header>
+          <div class="prose">
+            <ul>
+              <li><strong>Flatpak:</strong> a Linux desktop with Flatpak installed. The runtime provides GTK4 and libadwaita.</li>
+              <li><strong>User-local:</strong> Python 3.11 or newer, PyGObject, GTK4 and libadwaita. The installer copies the source and creates a symlink; it does not install Python packages.</li>
+              <li><strong>Watching:</strong> the watcher uses <code>watchdog</code> when it is installed and falls back to <code>inotifywait</code>. A sweep needs neither.</li>
+              <li><strong>Files:</strong> local paths that your user account can read and write. Symlinks are skipped.</li>
+            </ul>
+            <p>To check the GTK bindings before a source install:</p>
+          </div>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Check the bindings</span>
+              <button class="copy-btn" type="button" data-copy="python3 -c &quot;import gi; gi.require_version('Gtk', '4.0'); gi.require_version('Adw', '1')&quot;" aria-label="Copy the GTK binding check">Copy</button>
             </div>
-          </li>
-          <li>
-            <p>Run the installer. Add <code>--service</code> to enable background watching when you sign in.</p>
-            <div class="code-block">
-              <button class="copy-btn" type="button" data-copy="./install.sh" aria-label="Copy install command">Copy</button>
-              <pre><code>./install.sh</code></pre>
+            <pre><code>python3 -c "import gi; gi.require_version('Gtk', '4.0'); gi.require_version('Adw', '1')"</code></pre>
+          </div>
+          <p class="fineprint">An <code>ImportError</code> or a missing namespace names the package the desktop is missing.</p>
+          <div class="prose">
+            <p>Windows has a separate native build in the <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows" target="_blank" rel="noopener">gnu-sorter-windows</a> repository, with the same four working areas and the same GPL-3.0 license. The <a href="download.html">download page</a> lists both platforms.</p>
+          </div>
+        </section>
+
+        <section id="install" class="docs-section">
+          <header class="sec-head">
+            <h2>Installation</h2>
+            <p class="sec-lede">Flatpak is the primary Linux package. The user-local installer copies the app into your home directory and needs no root.</p>
+          </header>
+
+          <h3>Flatpak</h3>
+          <p>The three commands add the project repository, install Funnel and start it.</p>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Linux, Flatpak</span>
+              <button class="copy-btn" type="button" data-copy="flatpak remote-add --if-not-exists funnel \
+  https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo
+flatpak install funnel io.neptunepc.Funnel
+flatpak run io.neptunepc.Funnel" aria-label="Copy the Flatpak install commands">Copy</button>
             </div>
-          </li>
-          <li>
-            <p>Launch the application.</p>
-            <div class="code-block">
-              <button class="copy-btn" type="button" data-copy="gnu-sorter --gui" aria-label="Copy run command">Copy</button>
-              <pre><code>gnu-sorter --gui</code></pre>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> flatpak remote-add --if-not-exists funnel \
+  https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo
+<span class="prompt" aria-hidden="true">$</span> flatpak install funnel io.neptunepc.Funnel
+<span class="prompt" aria-hidden="true">$</span> flatpak run io.neptunepc.Funnel</code></pre>
+          </div>
+          <p class="fineprint">Updates arrive with <code>flatpak update io.neptunepc.Funnel</code>. The sandbox does not allow a tray icon or login autostart, so neither is part of this build. <a href="download.html">Other install paths</a>.</p>
+
+          <h3>User-local install</h3>
+          <p>The script installs into the current user's home directory. It copies the app to <code>~/.local/share/gnu-sorter/app</code>, links <code>~/.local/bin/gnu-sorter</code>, and writes the desktop entry, icons, KDE service menu and systemd user unit.</p>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">One line</span>
+              <button class="copy-btn" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash" aria-label="Copy the one-line installer">Copy</button>
             </div>
-            <p class="tiny">You can also start it from your applications menu.</p>
-          </li>
-        </ol>
-      </section>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash</code></pre>
+          </div>
+          <p>Add <code>--service</code> to enable and start the watcher at login:</p>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">With the watcher</span>
+              <button class="copy-btn" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash -s -- --service" aria-label="Copy the installer command with the watcher service">Copy</button>
+            </div>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash -s -- --service</code></pre>
+          </div>
+          <p class="fineprint">Without <code>--service</code> the unit is written but not enabled. Start it later with <code>systemctl --user enable --now gnu-sorter.service</code>.</p>
 
-      <section id="quickstart" class="docs-section">
-        <h2>Quick start</h2>
-        <h3>Using the GUI</h3>
-        <ol class="docs-steps">
-          <li>Open <strong>Folders</strong> and choose <strong>Add Folder</strong> to select a directory.</li>
-          <li>Open <strong>Rules</strong> and use <strong>Add Rule</strong> to send a matching file type to a destination.</li>
-          <li>Open the advanced rule editor for multiple extensions, name patterns, or regular expressions.</li>
-          <li>Apply a preset if you want a sensible starting point.</li>
-          <li>Use <strong>Sort Now</strong> to run once, or toggle <strong>Watch</strong> to sort new files automatically.</li>
-        </ol>
+          <h3>By hand</h3>
+          <ol class="seq seq--stack">
+            <li class="seq-item">
+              <span class="seq-index">01</span>
+              <div>
+                <h3 class="seq-title">Clone the repository</h3>
+                <p class="seq-text">The checkout contains the app, the installer and the service unit.</p>
+                <div class="code">
+                  <div class="code-head">
+                    <span class="code-label">Clone</span>
+                    <button class="copy-btn" type="button" data-copy="git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git &amp;&amp; cd gnu-sorter" aria-label="Copy the clone command">Copy</button>
+                  </div>
+                  <pre><code><span class="prompt" aria-hidden="true">$</span> git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git &amp;&amp; cd gnu-sorter</code></pre>
+                </div>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">02</span>
+              <div>
+                <h3 class="seq-title">Run the installer</h3>
+                <p class="seq-text">Add <code>--service</code> if the watcher should start at login.</p>
+                <div class="code">
+                  <div class="code-head">
+                    <span class="code-label">Install</span>
+                    <button class="copy-btn" type="button" data-copy="./install.sh" aria-label="Copy the install command">Copy</button>
+                  </div>
+                  <pre><code><span class="prompt" aria-hidden="true">$</span> ./install.sh</code></pre>
+                </div>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">03</span>
+              <div>
+                <h3 class="seq-title">Start the app</h3>
+                <p class="seq-text">The launcher also appears in your applications menu. The CLI modes work without a graphical session.</p>
+                <div class="code">
+                  <div class="code-head">
+                    <span class="code-label">Run</span>
+                    <button class="copy-btn" type="button" data-copy="gnu-sorter --gui" aria-label="Copy the run command">Copy</button>
+                  </div>
+                  <pre><code><span class="prompt" aria-hidden="true">$</span> gnu-sorter --gui</code></pre>
+                </div>
+              </div>
+            </li>
+          </ol>
+          <p class="fineprint">A source checkout reads the same configuration directory as the installed copy, so the two share folders, rules and journal.</p>
 
-        <h3>Using the CLI</h3>
-        <div class="code-block">
-          <button class="copy-btn" type="button" data-copy="gnu-sorter --sweep" aria-label="Copy sweep command">Copy</button>
-          <pre><code>gnu-sorter --sweep        <span class="cmt"># sort the configured folders once</span>
-gnu-sorter --watch        <span class="cmt"># keep watching for new files</span></code></pre>
-        </div>
-      </section>
+          <div class="note">
+            <span class="note-label">Updates</span>
+            <p>Flatpak: <code>flatpak update io.neptunepc.Funnel</code>. User-local: <code>gnu-sorter --update-check</code>, then <code>gnu-sorter --update</code>. The updater follows the release channel of the running build, and after an update it prints the <code>systemctl --user restart gnu-sorter</code> command when the watcher is enabled.</p>
+          </div>
+        </section>
 
-      <section id="interface" class="docs-section" data-shots-section>
-        <h2>The interface</h2>
-        <p>
-          The desktop application is organized into a few areas: the folders you organize, the rules
-          that sort them, the activity log and the settings. The screenshots below are from the Linux
-          (GTK4 / libadwaita) build; the native Windows build offers the same four areas (Folders, Rules,
-          Activity and Settings).
-        </p>
-        <div class="gallery">
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-folders.png" alt="The Folders tab, listing the folders Funnel watches." loading="lazy" data-shot></div>
-            <figcaption><b>Folders</b> &mdash; the directories Funnel watches.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-rules.png" alt="The Rules page, mapping extensions and name patterns to destinations." loading="lazy" data-shot></div>
-            <figcaption><b>Rules</b> &mdash; conditions paired with their destinations.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-rules-custom.png" alt="The Rules page showing a folder with its own rules and sort counts." loading="lazy" data-shot></div>
-            <figcaption><b>Per-folder rules</b> &mdash; each rule shows how many files it has sorted.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-advanced-rules.png" alt="The advanced JSON rule editor." loading="lazy" data-shot></div>
-            <figcaption><b>Advanced editor</b> &mdash; the raw JSON when you want it.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page showing files as they are sorted." loading="lazy" data-shot></div>
-            <figcaption><b>Activity</b> &mdash; every move as it happens.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-settings.png" alt="The Settings page with presets and watching options." loading="lazy" data-shot></div>
-            <figcaption><b>Settings</b> &mdash; presets, watching and startup behaviour.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-about.png" alt="The About dialog showing the app name and version." loading="lazy" data-shot></div>
-            <figcaption><b>About</b> &mdash; the app and its version.</figcaption>
-          </figure>
-        </div>
-      </section>
+        <section id="quickstart" class="docs-section">
+          <header class="sec-head">
+            <h2>Quick start</h2>
+            <p class="sec-lede">Add a folder, give it a rule, then run a sweep. Watching repeats the same pass as new files arrive.</p>
+          </header>
 
-      <section id="rules" class="docs-section">
-        <h2>Rules</h2>
-        <p>A rule has a destination folder and at least one condition that decides which files belong there.</p>
-        <dl class="defs">
-          <dt>Extension matching</dt>
-          <dd>Send files with a given extension to a folder, for example every <code>.jpg</code> to <code>Images</code>. A rule can list several extensions.</dd>
-          <dt>Name matching</dt>
-          <dd>Match part of a file name, or a regular expression, to catch files that are not distinguishable by extension alone.</dd>
-          <dt>Fallback</dt>
-          <dd>Files that match no rule are placed in <code>Needs-review</code>, so you can decide what to do with them.</dd>
-        </dl>
+          <h3>In the application</h3>
+          <ol class="seq">
+            <li class="seq-item">
+              <span class="seq-index">01</span>
+              <div>
+                <h3 class="seq-title">Add a folder</h3>
+                <p class="seq-text">Open <strong>Folders</strong>, then <strong>Add Folder</strong>. Pick a folder your user account owns, for example <code>~/Downloads</code>.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">02</span>
+              <div>
+                <h3 class="seq-title">Add a rule</h3>
+                <p class="seq-text"><strong>Rules</strong>, then <strong>Add Rule</strong> opens the wizard. A rule needs a destination name and at least one condition.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">03</span>
+              <div>
+                <h3 class="seq-title">Or start from a preset</h3>
+                <p class="seq-text">The menu half of <strong>Add Rule</strong> applies a preset to the selected folder. A preset replaces that folder's list.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">04</span>
+              <div>
+                <h3 class="seq-title">Run once or watch</h3>
+                <p class="seq-text"><strong>Sort Now</strong> runs a sweep. <strong>Watch</strong> repeats the same pass every <code>watch_interval</code> seconds, 2 by default.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">05</span>
+              <div>
+                <h3 class="seq-title">Check the result</h3>
+                <p class="seq-text"><strong>Activity</strong> lists each move with its rule and destination. <strong>Undo</strong> restores selected records.</p>
+              </div>
+            </li>
+          </ol>
 
-        <figure class="viz" data-viz="rules">
-          <figcaption class="viz-cap"><b>A condition on the left, a destination on the right.</b> A rule can list several extensions and patterns.</figcaption>
-        </figure>
+          <h3>From the command line</h3>
+          <p>Start with a dry run. It prints each planned move and leaves the folder untouched.</p>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">First run</span>
+              <button class="copy-btn" type="button" data-copy="gnu-sorter --list-roots
+gnu-sorter --sweep --dry-run
+gnu-sorter --sweep" aria-label="Copy the first-run commands">Copy</button>
+            </div>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> gnu-sorter --list-roots
+<span class="prompt" aria-hidden="true">$</span> gnu-sorter --sweep --dry-run
+<span class="prompt" aria-hidden="true">$</span> gnu-sorter --sweep</code></pre>
+          </div>
+          <p>Then watch, or reverse the last move:</p>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Watch and undo</span>
+              <button class="copy-btn" type="button" data-copy="gnu-sorter --watch
+gnu-sorter --undo-last 1" aria-label="Copy the watch and undo commands">Copy</button>
+            </div>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> gnu-sorter --watch
+<span class="prompt" aria-hidden="true">$</span> gnu-sorter --undo-last 1</code></pre>
+          </div>
+          <p class="fineprint">With no mode flag, <code>gnu-sorter</code> opens the graphical interface. <code>--watch</code> stays in the foreground; the systemd user unit runs it at login.</p>
+        </section>
 
-        <h3>Per-folder rules</h3>
-        <p>
-          Each folder can keep its own rules, or inherit a shared default set. This lets a Downloads
-          folder follow one scheme while a project folder follows another. You can give a folder its own
-          copy of the defaults and edit it, or revert it to the shared rules at any time.
-        </p>
+        <section id="interface" class="docs-section" data-shots-section>
+          <header class="sec-head">
+            <h2>The interface</h2>
+            <p class="sec-lede">The GTK4 build has five areas: Folders, Rules, Activity, Settings and About. The Windows build has the same four working areas with WinUI 3 controls.</p>
+          </header>
+          <div class="prose">
+            <p>Folders lists each watched directory and the number of rules it uses. Rules shows the selected folder's list in priority order, with a sort count beside each rule. Activity is a view of the journal. Settings holds timings, notifications, appearance and updates.</p>
+          </div>
+          <div class="gallery">
+            <figure class="shot shot--7">
+              <div class="shot-media"><img src="images/app-folders.png" alt="The Folders page listing watched directories with a rule count next to each." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">01</span><span><b>Folders.</b> Each watched folder and the number of rules it uses.</span></figcaption>
+            </figure>
+            <figure class="shot shot--5">
+              <div class="shot-media"><img src="images/app-rules.png" alt="The Rules page showing a folder's rules in priority order." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">02</span><span><b>Rules.</b> The selected folder's rules in priority order.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-rules-custom.png" alt="The Rules page for a folder with its own rules and a sort count on each rule." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">03</span><span><b>Per-folder rules.</b> Sort counts show what each rule has moved.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-advanced-rules.png" alt="The advanced editor showing a rule as JSON." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">04</span><span><b>Advanced editor.</b> The same rule as JSON.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">05</span><span><b>Activity.</b> The journal, newest first.</span></figcaption>
+            </figure>
+            <figure class="shot">
+              <div class="shot-media"><img src="images/app-settings.png" alt="The Settings page with timing, notification, appearance and update options." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">06</span><span><b>Settings.</b> Timings, notifications, appearance and updates.</span></figcaption>
+            </figure>
+            <figure class="shot">
+              <div class="shot-media"><img src="images/app-about.png" alt="The About dialog with the app name, version, license and project links." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">07</span><span><b>About.</b> Version, license and project links.</span></figcaption>
+            </figure>
+          </div>
+        </section>
 
-        <h3>The rule wizard</h3>
-        <p>
-          The fastest way to add a rule is the six-step wizard. Choose what to tidy, pick what to catch,
-          accept or change the suggested destination, fine-tune the size, age and match mode, set the
-          priority, then review a live preview of the files it would sort &mdash; all before saving.
-        </p>
-        <div class="gallery">
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-1.png" alt="Rule wizard step 1: choosing what to tidy." loading="lazy" data-shot></div>
-            <figcaption><b>Step 1</b> &mdash; what are we tidying?</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-2.png" alt="Rule wizard step 2: choosing what to catch." loading="lazy" data-shot></div>
-            <figcaption><b>Step 2</b> &mdash; what should it catch?</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-2-name.png" alt="Rule wizard step 2 with name matching enabled." loading="lazy" data-shot></div>
-            <figcaption><b>Step 2, by name</b> &mdash; match part of a file name too.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-3.png" alt="Rule wizard step 3: choosing a destination." loading="lazy" data-shot></div>
-            <figcaption><b>Step 3</b> &mdash; a suggested destination.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-4.png" alt="Rule wizard step 4: fine-tuning the rule." loading="lazy" data-shot></div>
-            <figcaption><b>Step 4</b> &mdash; fine-tune size, age and match mode.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-5.png" alt="Rule wizard step 5: priority and scope." loading="lazy" data-shot></div>
-            <figcaption><b>Step 5</b> &mdash; priority and scope.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-6.png" alt="Rule wizard step 6: review with a preview of affected files." loading="lazy" data-shot></div>
-            <figcaption><b>Step 6</b> &mdash; review with proof.</figcaption>
-          </figure>
-        </div>
-      </section>
+        <section id="rules" class="docs-section">
+          <header class="sec-head">
+            <h2>Rules</h2>
+            <p class="sec-lede">A rule is a destination folder plus at least one condition. Rules are stored as JSON, in the order they are evaluated.</p>
+          </header>
+          <div class="prose">
+            <p>The rule editor writes the fields below. The advanced editor shows the same object as JSON, and <code>--export-rules</code> writes it to a file.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Behaviour</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>name</code></td><td>string</td><td>Destination folder, relative to the watched folder. Subfolders are allowed (<code>Photos/Screenshots</code>). Absolute paths, <code>..</code> components and Windows reserved names are rejected.</td></tr>
+                <tr><td><code>extensions</code></td><td>array</td><td>Suffix match on the lowercased name, so <code>jpg</code> also matches <code>photo.JPG</code>. Compound suffixes such as <code>tar.gz</code> work the same way.</td></tr>
+                <tr><td><code>match_name_regex</code></td><td>string</td><td>Case-insensitive Python regular expression, applied with <code>re.search</code>, so it can match any part of the name. A pattern that does not compile is ignored.</td></tr>
+                <tr><td><code>exclude_name_regex</code></td><td>string</td><td>Veto. A matching name skips this rule even when an extension or name condition matched.</td></tr>
+                <tr><td><code>match_all</code></td><td>boolean</td><td>Catch-all. Matches every file that reaches it, so rules below it are unreachable.</td></tr>
+                <tr><td><code>match_mode</code></td><td>string</td><td><code>"all"</code> requires every condition that is set. The default requires any one condition.</td></tr>
+                <tr><td><code>enabled</code></td><td>boolean</td><td><code>false</code> skips the rule without removing it.</td></tr>
+                <tr><td><code>min_size_mb</code>, <code>max_size_mb</code></td><td>number</td><td>Size bounds in MB. A file outside them skips the rule. A sweep has the file metadata these bounds need.</td></tr>
+                <tr><td><code>modified_within_days</code></td><td>number</td><td>The file's modification time must be within this many days.</td></tr>
+              </tbody>
+            </table>
+          </div>
 
-      <section id="presets" class="docs-section">
-        <h2>Presets</h2>
-        <p>Presets provide a starting point that you can edit afterwards.</p>
-        <ul>
-          <li><strong>GNOME defaults</strong> — a broad set covering common document, media, and archive types.</li>
-          <li><strong>Photography</strong> — focused on image and video files.</li>
-          <li><strong>Code projects</strong> — source files, documents, and archives.</li>
-          <li><strong>Empty</strong> — start from no rules at all.</li>
-        </ul>
-        <div class="preset-chips" aria-hidden="true">
-          <span class="chip">GNOME defaults</span>
-          <span class="chip">Photography</span>
-          <span class="chip">Code projects</span>
-          <span class="chip">Empty</span>
-        </div>
-      </section>
+          <h3>How a file is matched</h3>
+          <ol class="seq">
+            <li class="seq-item">
+              <span class="seq-index">01</span>
+              <div>
+                <h3 class="seq-title">Test the conditions</h3>
+                <p class="seq-text">Read the name in lowercase, test each extension with a suffix match, and test the name regex with <code>re.search</code>.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">02</span>
+              <div>
+                <h3 class="seq-title">Apply the mode</h3>
+                <p class="seq-text">By default one hit is enough. With <code>match_mode: "all"</code>, every condition that is set must hit.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">03</span>
+              <div>
+                <h3 class="seq-title">Apply the limits</h3>
+                <p class="seq-text">The exclusion regex, size bounds and age bound can all veto the rule after its conditions matched.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">04</span>
+              <div>
+                <h3 class="seq-title">Take the first survivor</h3>
+                <p class="seq-text">The first enabled rule that survives decides the destination. If none do, the file goes to <code>Needs-review</code>.</p>
+              </div>
+            </li>
+          </ol>
 
-      <section id="configuration" class="docs-section">
-        <h2>Configuration</h2>
-        <p>Your rules, folders, and settings are stored in your configuration directory:</p>
-        <div class="code-block">
-          <button class="copy-btn" type="button" data-copy="~/.config/gnu-sorter/" aria-label="Copy config path">Copy</button>
-          <pre><code>~/.config/gnu-sorter/</code></pre>
-        </div>
-        <p>The journal of moves, used for undo, is kept separately:</p>
-        <div class="code-block">
-          <button class="copy-btn" type="button" data-copy="~/.local/share/gnu-sorter/history.log" aria-label="Copy history path">Copy</button>
-          <pre><code>~/.local/share/gnu-sorter/history.log</code></pre>
-        </div>
-        <p>Uninstalling keeps these by default, so your rules survive a reinstall.</p>
+          <h3>A worked rule</h3>
+          <p>This rule catches image files whose name also looks like a screenshot, and only when both conditions hold:</p>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">One rule as JSON</span>
+              <button class="copy-btn" type="button" data-copy='{
+  "name": "Photos/Screenshots",
+  "extensions": ["png", "jpg"],
+  "match_name_regex": "screenshot|capture",
+  "match_mode": "all"
+}' aria-label="Copy the example rule as JSON">Copy</button>
+            </div>
+            <pre><code>{
+  "name": "Photos/Screenshots",
+  "extensions": ["png", "jpg"],
+  "match_name_regex": "screenshot|capture",
+  "match_mode": "all"
+}</code></pre>
+          </div>
+          <div class="prose">
+            <p>In a folder containing <code>Screenshot 2026-05-02.png</code>, <code>capture_01.jpg</code> and <code>screen_capture.mp4</code>, the first two move to <code>Photos/Screenshots</code>. The third matches the name pattern but fails the extension test, so the rule skips it and matching continues with the next rule.</p>
+            <p>Without <code>match_mode</code>, the same pattern and extension list would be OR-ed: <code>screen_capture.mp4</code> would match on the name alone and move.</p>
+          </div>
+          <div class="note">
+            <span class="note-label">Order</span>
+            <p>The default template lists Photos/Screenshots and Wallpapers before Photos. Both name rules must stay above the broad Photos extension rule, or the first <code>.jpg</code> would be claimed as a photo before either name test runs.</p>
+          </div>
+        </section>
 
-        <figure class="viz" data-viz="tree">
-          <figcaption class="viz-cap"><b>Everything is plain files.</b> Rules, folders and presets live as JSON you can edit, back up or copy between machines.</figcaption>
-        </figure>
-      </section>
+        <section id="per-folder" class="docs-section">
+          <header class="sec-head">
+            <h2>Per-folder rules</h2>
+            <p class="sec-lede">A folder either inherits the shared template or keeps its own ruleset. A folder with its own list is detached: changes to the template do not reach it.</p>
+          </header>
+          <dl class="spec">
+            <div class="spec-row">
+              <dt>Template</dt>
+              <dd>~/.config/gnu-sorter/rules.json</dd>
+            </div>
+            <div class="spec-row">
+              <dt>Folder list</dt>
+              <dd>~/.config/gnu-sorter/roots.d/&lt;hash&gt;.json</dd>
+            </div>
+            <div class="spec-row">
+              <dt>Hash</dt>
+              <dd>first 40 hex characters of the SHA-256 of the absolute folder path</dd>
+            </div>
+            <div class="spec-row">
+              <dt>Contents</dt>
+              <dd>{"path": "...", "rules": [ ... ]}</dd>
+            </div>
+          </dl>
+          <div class="prose">
+            <p>A ruleset is keyed by path, not by inode or name. Move or rename the folder and the old file stays in <code>roots.d</code> under the previous path; the folder at the new path inherits the template again. Delete the stale file to clean up.</p>
+          </div>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Per-folder commands</span>
+              <button class="copy-btn" type="button" data-copy="gnu-sorter --detach-rules --root ~/Downloads
+gnu-sorter --list-rules --root ~/Downloads
+gnu-sorter --attach-rules --root ~/Downloads" aria-label="Copy the per-folder rules commands">Copy</button>
+            </div>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> gnu-sorter --detach-rules --root ~/Downloads
+<span class="prompt" aria-hidden="true">$</span> gnu-sorter --list-rules --root ~/Downloads
+<span class="prompt" aria-hidden="true">$</span> gnu-sorter --attach-rules --root ~/Downloads</code></pre>
+          </div>
+          <div class="prose">
+            <p><code>--detach-rules</code> writes a copy of the effective rules to the folder's file. <code>--attach-rules</code> deletes that file, so the folder inherits the template again. <code>--add-rule</code> with <code>--root</code> detaches a folder automatically.</p>
+          </div>
+          <div class="note">
+            <span class="note-label">Failure</span>
+            <p>If <code>--list-rules --root</code> says <code>inherits the default template</code> when you expected custom rules, the folder path has changed or the ruleset file was removed. Run <code>--detach-rules</code> at the current path and reapply the rules.</p>
+          </div>
+        </section>
 
-      <section id="journal" class="docs-section">
-        <h2>The journal</h2>
-        <p>
-          Every move is recorded in a journal so it can be reversed. Funnel reads that journal once
-          into an in-memory index, so the Rules page can show how many files each rule has sorted and
-          the Activity page can search instantly.
-        </p>
-        <ul>
-          <li><strong>Search</strong> — filter by file name (substring or glob), rule, folder or time window.</li>
-          <li><strong>Restore preview</strong> — see exactly which files would come back, their sizes and any name clashes, before committing.</li>
-          <li><strong>Restore anywhere</strong> — return files to their original folders, or into a folder you choose.</li>
-          <li><strong>Backup &amp; portability</strong> — back the journal up to <code>history.log.bak</code>, or export and import it to move history between machines.</li>
-        </ul>
-        <figure class="viz" data-viz="undo">
-          <figcaption class="viz-cap"><b>Nothing is a one-way door.</b> Every move is journaled, searchable and reversible.</figcaption>
-        </figure>
-        <div class="gallery">
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
-            <figcaption><b>Activity</b> &mdash; every move, with the rule that caught it.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-activity-search.png" alt="Searching the Activity page by file name." loading="lazy" data-shot></div>
-            <figcaption><b>Search</b> &mdash; filter by file name, rule or date range.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-activity-restore.png" alt="A restore preview listing files, sizes and name clashes." loading="lazy" data-shot></div>
-            <figcaption><b>Restore preview</b> &mdash; see sizes and clashes before committing.</figcaption>
-          </figure>
-        </div>
-      </section>
+        <section id="wizard" class="docs-section" data-shots-section>
+          <header class="sec-head">
+            <h2>The rule wizard</h2>
+            <p class="sec-lede">The wizard opens from Rules, Add Rule. It writes the same rule object as the advanced editor and saves nothing until the last step.</p>
+          </header>
+          <ol class="seq">
+            <li class="seq-item">
+              <span class="seq-index">01</span>
+              <div>
+                <h3 class="seq-title">Choose the folder</h3>
+                <p class="seq-text">Pick the folder to tidy. The wizard starts on the folder selected in Rules.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">02</span>
+              <div>
+                <h3 class="seq-title">Pick what to catch</h3>
+                <p class="seq-text">Choose extensions, a name pattern, or both. Patterns are regular expressions and are tested with <code>re.search</code>.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">03</span>
+              <div>
+                <h3 class="seq-title">Take the destination</h3>
+                <p class="seq-text">Keep the suggested relative name or type another. <code>Photos/Screenshots</code> is valid; an absolute path or <code>..</code> is rejected.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">04</span>
+              <div>
+                <h3 class="seq-title">Add limits</h3>
+                <p class="seq-text">Set <code>min_size_mb</code>, <code>max_size_mb</code> or <code>modified_within_days</code>, then choose any or all for the match mode.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">05</span>
+              <div>
+                <h3 class="seq-title">Set priority and scope</h3>
+                <p class="seq-text">Choose the rule's position in the folder's list and confirm the folder. Position is priority: the first match wins.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">06</span>
+              <div>
+                <h3 class="seq-title">Review the result</h3>
+                <p class="seq-text">The last step lists real files the rule would move, using their size and modification time. Save writes the rule; Cancel discards it.</p>
+              </div>
+            </li>
+          </ol>
+          <div class="gallery">
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-1.png" alt="Rule wizard step 1, choosing the folder to tidy." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">08</span><span><b>Step 1.</b> Choose the folder to tidy.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-2.png" alt="Rule wizard step 2, choosing extensions and name patterns to catch." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">09</span><span><b>Step 2.</b> Pick extensions, a name pattern, or both.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-2-name.png" alt="Rule wizard step 2 with a name pattern enabled." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">10</span><span><b>Step 2, by name.</b> A name pattern can match part of the file name.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-3.png" alt="Rule wizard step 3, showing a suggested destination folder." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">11</span><span><b>Step 3.</b> A suggested destination.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-4.png" alt="Rule wizard step 4, setting size and age limits and the match mode." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">12</span><span><b>Step 4.</b> Size, age and match mode.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-5.png" alt="Rule wizard step 5, setting rule priority and scope." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">13</span><span><b>Step 5.</b> Priority and scope.</span></figcaption>
+            </figure>
+            <figure class="shot shot--12">
+              <div class="shot-media"><img src="images/app-wizard-6.png" alt="Rule wizard step 6, reviewing the files the rule would move." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">14</span><span><b>Step 6.</b> A preview of the real files the rule would move.</span></figcaption>
+            </figure>
+          </div>
+          <p class="fineprint">The advanced editor exposes the same fields as JSON. <a href="#rules">Rule fields</a>.</p>
+        </section>
 
-      <section id="cli" class="docs-section">
-        <h2>CLI reference</h2>
-        <p>These commands are drawn from the project README. Run <code>gnu-sorter --help</code> for the complete, current reference.</p>
+        <section id="presets" class="docs-section">
+          <header class="sec-head">
+            <h2>Presets</h2>
+            <p class="sec-lede">A preset replaces the selected folder's rules with a starting list. It does not merge with what was there.</p>
+          </header>
+          <div class="prose">
+            <p>The presets are in the menu half of the <strong>Add Rule</strong> button. Applying one detaches the folder if it was inheriting, then writes the new list to <code>roots.d</code>. The template and other folders are not touched.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Preset</th><th scope="col">Rules written</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>GNOME defaults</code></td><td>The template list: Photos/Screenshots, Wallpapers, Photos, Videos, Music, Documents, Archives, Installers, ISOs, Code, Fonts and Torrents.</td></tr>
+                <tr><td><code>Photography</code></td><td>Photos/Screenshots, Wallpapers, Photos and Videos.</td></tr>
+                <tr><td><code>Code projects</code></td><td>Code, Documents and Archives.</td></tr>
+                <tr><td><code>Empty</code></td><td>No rules. Every file goes to <code>Needs-review</code> until a rule is added.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th scope="col">Command</th><th scope="col">Description</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><code>gnu-sorter --gui</code></td><td>Launch the graphical application.</td></tr>
-              <tr><td><code>gnu-sorter --list-rules</code></td><td>List the default template rules.</td></tr>
-              <tr><td><code>gnu-sorter --list-rules --root ~/Downloads</code></td><td>View the effective rules for a specific folder.</td></tr>
-              <tr><td><code>gnu-sorter --add-rule &lt;name&gt; --folder &lt;folder&gt; --root &lt;path&gt;</code></td><td>Add a rule to a specific folder only.</td></tr>
-              <tr><td><code>gnu-sorter --attach-rules --root &lt;path&gt;</code></td><td>Revert a folder to the shared template rules.</td></tr>
-              <tr><td><code>gnu-sorter --export-rules &lt;file&gt;</code></td><td>Write the current rules (or a folder's, with <code>--root</code>) to a JSON file.</td></tr>
-              <tr><td><code>gnu-sorter --import-rules &lt;file&gt;</code></td><td>Replace the current rules (or a folder's, with <code>--root</code>) from a JSON file.</td></tr>
-              <tr><td><code>gnu-sorter --sweep</code></td><td>Sort the configured folders once.</td></tr>
-              <tr><td><code>gnu-sorter --watch</code></td><td>Watch the folders and sort new files.</td></tr>
-              <tr><td><code>gnu-sorter --journal --journal-name &lt;glob&gt;</code></td><td>Search the move journal by file name (substring or glob), rule, folder or date range.</td></tr>
-              <tr><td><code>gnu-sorter --restore --journal-rule &lt;name&gt; --dry-run</code></td><td>Preview a restore; drop <code>--dry-run</code> to commit. Add <code>--restore-into</code> to target a folder.</td></tr>
-              <tr><td><code>gnu-sorter --undo-last &lt;n&gt;</code></td><td>Undo the last <code>n</code> moves.</td></tr>
-              <tr><td><code>gnu-sorter --backup-journal</code></td><td>Copy the journal to <code>history.log.bak</code>.</td></tr>
-              <tr><td><code>gnu-sorter --export-journal &lt;file&gt;</code> / <code>--import-journal &lt;file&gt;</code></td><td>Move the journal between machines; imports merge without duplicating.</td></tr>
-              <tr><td><code>gnu-sorter --help</code></td><td>Show all available options.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <section id="configuration" class="docs-section">
+          <header class="sec-head">
+            <h2>Configuration</h2>
+            <p class="sec-lede">Configuration is plain JSON. The paths below are the default Linux locations.</p>
+          </header>
+          <dl class="spec">
+            <div class="spec-row">
+              <dt>rules.json</dt>
+              <dd>Default template ruleset.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>roots.json</dt>
+              <dd>Watched folders, each with an <code>enabled</code> flag.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>roots.d/*.json</dt>
+              <dd>Per-folder rulesets, keyed by absolute path.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>settings.json</dt>
+              <dd>Timings, notifications, appearance, updates and journal limits.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>history.log</dt>
+              <dd>Move journal, one JSON object per line.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>history.log.bak</dt>
+              <dd>Copy written before a journal trim, or by <code>--backup-journal</code>.</dd>
+            </div>
+          </dl>
 
-      <section id="uninstall" class="docs-section">
-        <h2>Uninstalling</h2>
-        <p>Run the uninstaller from the repository:</p>
-        <div class="code-block">
-          <button class="copy-btn" type="button" data-copy="./uninstall.sh" aria-label="Copy uninstall command">Copy</button>
-          <pre><code>./uninstall.sh</code></pre>
-        </div>
-        <p>
-          Configuration and history are kept by default. Add <code>--purge</code> to also remove
-          <code>~/.config/gnu-sorter/</code> and <code>~/.local/share/gnu-sorter/history.log</code>.
-        </p>
-      </section>
+          <h3>Settings defaults</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Setting</th><th scope="col">Default</th><th scope="col">Effect</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>min_stable_seconds</code></td><td>3</td><td>Minimum age before a file is eligible.</td></tr>
+                <tr><td><code>stability_interval</code></td><td>0.5</td><td>Seconds between the confirmation probes.</td></tr>
+                <tr><td><code>cautious_downloads</code></td><td>true</td><td>Recheck size and modification time after the settle window.</td></tr>
+                <tr><td><code>watch_interval</code></td><td>2</td><td>Seconds between watch passes.</td></tr>
+                <tr><td><code>notifications</code></td><td>true</td><td>Desktop notification after a watched move.</td></tr>
+                <tr><td><code>dry_run_default</code></td><td>false</td><td>Make <code>--sweep</code> a preview unless the setting is turned off.</td></tr>
+                <tr><td><code>check_for_updates</code></td><td>true</td><td>Check for a newer release after the GUI starts.</td></tr>
+                <tr><td><code>color_scheme</code></td><td>"default"</td><td>Follow the system, or force <code>"light"</code> or <code>"dark"</code>.</td></tr>
+                <tr><td><code>accent</code></td><td>"green"</td><td>Accent colour key, or <code>"system"</code> to follow the desktop.</td></tr>
+                <tr><td><code>history_max_entries</code></td><td>2500</td><td>Entries kept when the journal is trimmed.</td></tr>
+                <tr><td><code>history_max_bytes</code></td><td>1000000</td><td>File size that triggers a trim.</td></tr>
+              </tbody>
+            </table>
+          </div>
 
-      <section id="troubleshooting" class="docs-section">
-        <h2>Troubleshooting</h2>
-        <dl class="defs">
-          <dt>A file was not moved</dt>
-          <dd>Funnel waits for a file to stop changing before sorting it. Files that are still downloading, hidden, or that match no rule may be left in place. Unmatched files are collected in <code>Needs-review</code>.</dd>
-          <dt>A move needs to be reversed</dt>
-          <dd>Every move is journaled. Use <strong>Undo</strong> in the interface, or <code>gnu-sorter --undo-last 1</code> on the command line.</dd>
-          <dt>Rules did not apply to a folder</dt>
-          <dd>Check whether the folder inherits the default rules rather than keeping its own set.</dd>
-        </dl>
-        <figure class="viz" data-viz="undo">
-          <figcaption class="viz-cap"><b>Every move is reversible.</b> The journal records each move so you can undo the last one — or several — at any time.</figcaption>
-        </figure>
-      </section>
+          <div class="prose">
+            <p>Pass <code>--config DIR</code> to isolate a run. The config files and <code>history.log</code> are read from <code>DIR</code>, and the default data directory is not touched. Set <code>GNU_SORTER_HISTORY</code> to move the journal when no <code>--config</code> is given.</p>
+          </div>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Isolated configuration</span>
+              <button class="copy-btn" type="button" data-copy="gnu-sorter --config /tmp/funnel-test --list-rules" aria-label="Copy the isolated config command">Copy</button>
+            </div>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> gnu-sorter --config /tmp/funnel-test --list-rules</code></pre>
+          </div>
+        </section>
 
-      <section id="help" class="docs-section">
-        <h2>Getting help</h2>
-        <p>
-          The best place to ask questions, report a problem, or contribute is the project repository on
-          GitHub.
-        </p>
-        <div class="cta-actions">
-          <a class="btn btn-primary" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter/issues" target="_blank" rel="noopener">Report an issue</a>
-          <a class="btn btn-outline" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">Open the repository</a>
-        </div>
-      </section>
-    </article>
+        <section id="journal" class="docs-section" data-shots-section>
+          <header class="sec-head">
+            <h2>The journal</h2>
+            <p class="sec-lede">A completed move appends one JSON object to history.log. The Activity page and the CLI read the same file.</p>
+          </header>
+          <div class="prose">
+            <p>The journal is read once into an in-memory index. That index powers the Activity search and the sort count beside each rule, and it is what restore selects from.</p>
+          </div>
+          <dl class="spec">
+            <div class="spec-row">
+              <dt>v</dt>
+              <dd>Journal format version. The current version is 2.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>id</dt>
+              <dd>Move id, a UUID hex string.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>ts</dt>
+              <dd>Local timestamp, <code>YYYY-MM-DD HH:MM:SS</code>.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>src</dt>
+              <dd>Source path.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>dest</dt>
+              <dd>Destination path.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>size, mtime</dt>
+              <dd>Bytes and epoch seconds, used to detect a file already back in place.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>rule</dt>
+              <dd>Rule name that matched, when known.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>root</dt>
+              <dd>Watched folder that owned the sweep.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>batch</dt>
+              <dd>Id shared by all moves in one sweep.</dd>
+            </div>
+          </dl>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">One journal line</span>
+              <button class="copy-btn" type="button" data-copy='{"v": 2, "id": "5f2a9c1b7e4d4c0f9a3e6b8d2c1f0a4e", "ts": "2026-05-02 14:31:08", "src": "/home/you/Downloads/report.pdf", "dest": "/home/you/Downloads/Documents/report.pdf", "size": 482113, "mtime": 1777720268.0, "rule": "Documents", "root": "/home/you/Downloads", "batch": "3c9e7a1d5b2f4e8a9c0d6f3b1e7a5c2d"}' aria-label="Copy the example journal line">Copy</button>
+            </div>
+            <pre><code>{"v": 2, "id": "5f2a9c1b7e4d4c0f9a3e6b8d2c1f0a4e", "ts": "2026-05-02 14:31:08", "src": "/home/you/Downloads/report.pdf", "dest": "/home/you/Downloads/Documents/report.pdf", "size": 482113, "mtime": 1777720268.0, "rule": "Documents", "root": "/home/you/Downloads", "batch": "3c9e7a1d5b2f4e8a9c0d6f3b1e7a5c2d"}</code></pre>
+          </div>
+          <div class="prose">
+            <p>When the file passes 1,000,000 bytes, Funnel copies it to <code>history.log.bak</code> and keeps the newest 2,500 entries. Both limits are settings: <code>history_max_bytes</code> and <code>history_max_entries</code>.</p>
+          </div>
+
+          <h3>Search and restore</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Selector</th><th scope="col">Selects</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>--since 7d</code>, <code>--before 2026-05-01</code></td><td>A time window. Units are <code>s</code>, <code>m</code>, <code>h</code>, <code>d</code> and <code>w</code>.</td></tr>
+                <tr><td><code>--journal-rule Photos</code></td><td>Records caught by one rule name.</td></tr>
+                <tr><td><code>--journal-name 'screenshot*'</code></td><td>Name substring or glob.</td></tr>
+                <tr><td><code>--journal-ext png,jpg</code></td><td>Source extension, comma list allowed.</td></tr>
+                <tr><td><code>--journal-min-size 1M</code>, <code>--journal-max-size 500K</code></td><td>Recorded byte size.</td></tr>
+                <tr><td><code>--journal-folder ~/Downloads/Documents</code></td><td>Destination folder.</td></tr>
+                <tr><td><code>--journal-batch ID</code></td><td>One sweep.</td></tr>
+                <tr><td><code>--limit 50</code></td><td>The last N records.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Search and restore</span>
+              <button class="copy-btn" type="button" data-copy="gnu-sorter --journal --since 7d --journal-rule Photos
+gnu-sorter --restore --journal-name '*.jpg' --dry-run
+gnu-sorter --restore --journal-rule Photos --restore-into ~/Restored" aria-label="Copy the journal search and restore commands">Copy</button>
+            </div>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> gnu-sorter --journal --since 7d --journal-rule Photos
+<span class="prompt" aria-hidden="true">$</span> gnu-sorter --restore --journal-name '*.jpg' --dry-run
+<span class="prompt" aria-hidden="true">$</span> gnu-sorter --restore --journal-rule Photos --restore-into ~/Restored</code></pre>
+          </div>
+          <div class="prose">
+            <p>A restore removes the records it completed, so a second run cannot replay them. Records whose file is gone, or whose target is occupied under <code>--on-conflict skip</code>, stay in the journal. Add <code>--dry-run</code> to print the plan before anything moves.</p>
+            <p>Back up, export or merge the journal with:</p>
+          </div>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Backup and transfer</span>
+              <button class="copy-btn" type="button" data-copy="gnu-sorter --backup-journal
+gnu-sorter --export-journal ~/history-export.log
+gnu-sorter --import-journal ~/history-export.log" aria-label="Copy the journal backup and transfer commands">Copy</button>
+            </div>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> gnu-sorter --backup-journal
+<span class="prompt" aria-hidden="true">$</span> gnu-sorter --export-journal ~/history-export.log
+<span class="prompt" aria-hidden="true">$</span> gnu-sorter --import-journal ~/history-export.log</code></pre>
+          </div>
+          <p class="fineprint">An import skips records whose id is already present. A record without an id is always appended.</p>
+
+          <div class="gallery">
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">15</span><span><b>Activity.</b> Every move with the rule that caught it.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-activity-search.png" alt="Searching the Activity page by file name and rule." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">16</span><span><b>Search.</b> Filter by name, rule, folder or date range.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-activity-restore.png" alt="A restore preview listing files, sizes and name clashes." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">17</span><span><b>Restore preview.</b> Files, sizes and clashes before committing.</span></figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section id="cli" class="docs-section">
+          <header class="sec-head">
+            <h2>CLI reference</h2>
+            <p class="sec-lede">The table lists the commands covered on this page. Run gnu-sorter --help for every flag, including the service commands and --config.</p>
+          </header>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">Command</th><th scope="col">Description</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>gnu-sorter --gui</code></td><td>Launch the graphical application.</td></tr>
+                <tr><td><code>gnu-sorter --list-rules</code></td><td>List the default template rules.</td></tr>
+                <tr><td><code>gnu-sorter --list-rules --root ~/Downloads</code></td><td>View the effective rules for a specific folder.</td></tr>
+                <tr><td><code>gnu-sorter --add-rule &lt;name&gt; --folder &lt;folder&gt; --root &lt;path&gt;</code></td><td>Add a rule to a specific folder only.</td></tr>
+                <tr><td><code>gnu-sorter --attach-rules --root &lt;path&gt;</code></td><td>Revert a folder to the shared template rules.</td></tr>
+                <tr><td><code>gnu-sorter --export-rules &lt;file&gt;</code></td><td>Write the current rules (or a folder's, with <code>--root</code>) to a JSON file.</td></tr>
+                <tr><td><code>gnu-sorter --import-rules &lt;file&gt;</code></td><td>Replace the current rules (or a folder's, with <code>--root</code>) from a JSON file.</td></tr>
+                <tr><td><code>gnu-sorter --sweep</code></td><td>Sort the configured folders once.</td></tr>
+                <tr><td><code>gnu-sorter --watch</code></td><td>Watch the folders and sort new files.</td></tr>
+                <tr><td><code>gnu-sorter --journal --journal-name &lt;glob&gt;</code></td><td>Search the move journal by file name (substring or glob), rule, folder or date range.</td></tr>
+                <tr><td><code>gnu-sorter --restore --journal-rule &lt;name&gt; --dry-run</code></td><td>Preview a restore; drop <code>--dry-run</code> to commit. Add <code>--restore-into</code> to target a folder.</td></tr>
+                <tr><td><code>gnu-sorter --undo-last &lt;n&gt;</code></td><td>Undo the last <code>n</code> moves.</td></tr>
+                <tr><td><code>gnu-sorter --backup-journal</code></td><td>Copy the journal to <code>history.log.bak</code>.</td></tr>
+                <tr><td><code>gnu-sorter --export-journal &lt;file&gt;</code> / <code>--import-journal &lt;file&gt;</code></td><td>Move the journal between machines; imports merge without duplicating.</td></tr>
+                <tr><td><code>gnu-sorter --help</code></td><td>Show all available options.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="uninstall" class="docs-section">
+          <header class="sec-head">
+            <h2>Uninstalling</h2>
+            <p class="sec-lede">The uninstaller removes the app and its launchers. Configuration and the journal are a separate decision.</p>
+          </header>
+          <div class="prose">
+            <p>Run the uninstaller from the checkout. It disables and removes the systemd user unit, then deletes <code>~/.local/bin/gnu-sorter</code>, the desktop entry, the KDE service menu, the icons and <code>~/.local/share/gnu-sorter/app</code>.</p>
+          </div>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Uninstall</span>
+              <button class="copy-btn" type="button" data-copy="./uninstall.sh" aria-label="Copy the uninstall command">Copy</button>
+            </div>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> ./uninstall.sh</code></pre>
+          </div>
+          <div class="prose">
+            <p>Config and journal survive by default, so a reinstall keeps its folders and rules. <code>--purge</code> also removes <code>~/.config/gnu-sorter</code> and <code>~/.local/share/gnu-sorter/history.log</code>.</p>
+          </div>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Uninstall and purge</span>
+              <button class="copy-btn" type="button" data-copy="./uninstall.sh --purge" aria-label="Copy the purge command">Copy</button>
+            </div>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> ./uninstall.sh --purge</code></pre>
+          </div>
+          <p class="fineprint">Flatpak: <code>flatpak uninstall io.neptunepc.Funnel</code> removes the app. Add <code>--delete-data</code> to remove its config and journal as well.</p>
+        </section>
+
+        <section id="troubleshooting" class="docs-section">
+          <header class="sec-head">
+            <h2>Troubleshooting</h2>
+            <p class="sec-lede">Most reports come down to three things: a file that was not eligible, a rule that came earlier in the list, or a folder that no longer matches its ruleset path.</p>
+          </header>
+          <div class="prose">
+            <dl class="defs">
+              <dt>A file stayed in the folder</dt>
+              <dd>Run <code>gnu-sorter --sweep --dry-run</code>. The summary reports held files, and a dry run lists up to ten of them. A file is held while it carries an in-progress suffix, while it is younger than its settle window, or when the confirmation probes see its size or modification time change. Directories, symlinks and dot files are skipped before matching starts.</dd>
+
+              <dt>A file went to the wrong folder</dt>
+              <dd>The first matching rule wins. A catch-all (<code>match_all</code>) or a broad extension rule above the intended rule claims the file first. Move the specific rule above it, or give the broad rule an <code>exclude_name_regex</code>.</dd>
+
+              <dt>A folder ignores its own rules</dt>
+              <dd>Rulesets are keyed by absolute path. Run <code>gnu-sorter --list-rules --root ~/Downloads</code>: it prints <code>own rules</code> or <code>inherits the default template</code>. If the folder moved, recreate the ruleset at the new path with <code>--detach-rules</code>.</dd>
+
+              <dt>Undo says nothing matches</dt>
+              <dd>A completed restore removes its records, and a trimmed journal keeps the newest 2,500 entries. Run <code>gnu-sorter --journal --limit 20</code> to see what remains. A restore from a different configuration needs <code>--config DIR</code>.</dd>
+
+              <dt>The GUI does not start</dt>
+              <dd>With the source install, a missing <code>gi</code>, <code>Gtk 4.0</code> or <code>Adw 1</code> raises <code>ImportError</code>. The CLI modes run without GTK. Install PyGObject, GTK4 and libadwaita, or use the Flatpak. Run <code>gnu-sorter --version</code> to confirm which build is on <code>PATH</code>.</dd>
+
+              <dt>Watch does nothing</dt>
+              <dd>Check <code>systemctl --user status gnu-sorter.service</code>. Without <code>--service</code> the unit is installed but not enabled. The watcher uses <code>watchdog</code> when available and falls back to <code>inotifywait</code>; if neither is installed, use <code>--sweep</code> or install one of them.</dd>
+            </dl>
+          </div>
+        </section>
+
+        <section id="help" class="docs-section">
+          <header class="sec-head">
+            <h2>Getting help</h2>
+            <p class="sec-lede">Report a problem at the issue tracker. Include the build, the rules and the journal lines for the file.</p>
+          </header>
+          <div class="prose">
+            <p>Run <code>gnu-sorter --version</code>, then <code>gnu-sorter --list-rules --root &lt;path&gt;</code> for the folder in question. For a move that needs reversing, add the matching lines from <code>gnu-sorter --journal --journal-name '&lt;name&gt;*'</code>. Redact file names if they are private.</p>
+            <p>Report a problem at the <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter/issues" target="_blank" rel="noopener">issue tracker</a>. The source is at <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">github.com/notmicrosoft2000-cmd/gnu-sorter</a>. The Windows build is in its own repository, <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows" target="_blank" rel="noopener">gnu-sorter-windows</a>. Both builds are GPL-3.0.</p>
+          </div>
+        </section>
+      </article>
+    </div>
   </main>
 
   <footer class="site-footer">
     <h2 class="visually-hidden">Site footer</h2>
-    <div class="container footer-grid">
+    <div class="wrap footer-grid">
       <div class="footer-brand">
         <a class="brand" href="index.html" aria-label="Funnel home">
           <span class="brand-mark" aria-hidden="true">
@@ -429,7 +901,11 @@ gnu-sorter --watch        <span class="cmt"># keep watching for new files</span>
           </span>
           <span class="brand-text">Funnel</span>
         </a>
-        <p>An advanced, open-source file-sorting utility for keeping your directories organized with custom rules.</p>
+        <p>A file sorter for Linux and Windows. Rules are per folder, moves are journaled, and undo is one command.</p>
+        <p class="footer-meta">
+          <span>Version 3.0 in development</span>
+          <span>GPL-3.0</span>
+        </p>
       </div>
 
       <nav class="footer-col" aria-label="Product">
@@ -456,9 +932,9 @@ gnu-sorter --watch        <span class="cmt"># keep watching for new files</span>
       </nav>
     </div>
 
-    <div class="container footer-bottom">
+    <div class="wrap footer-bottom">
       <p>&copy; <span id="year">2026</span> notmicrosoft2000-cmd &middot; Funnel &middot; GPL-3.0</p>
-      <p class="footer-tag">Your files. Your rules. Automatically organized.</p>
+      <p class="footer-tag">Per-folder rules. Journaled moves.</p>
     </div>
   </footer>
 

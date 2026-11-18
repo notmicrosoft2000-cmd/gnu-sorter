@@ -1,10 +1,49 @@
-<!doctype html><meta charset="utf-8">
-<title>Funnel — Flatpak repository</title>
-<body style="font:16px system-ui;max-width:40rem;margin:4rem auto;padding:0 1rem">
-<h1>Funnel — Flatpak repository</h1>
-<p>Install with Flatpak:</p>
-<pre>flatpak remote-add --if-not-exists funnel \
-https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo
-flatpak install funnel io.neptunepc.Funnel</pre>
-<p><a href="https://notmicrosoft2000-cmd.github.io/gnu-sorter/">Back to the site</a></p>
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Funnel Flatpak repository</title>
+  <meta name="description" content="The Flatpak repository for Funnel. Add the remote, install io.neptunepc.Funnel, and start the app.">
+  <meta name="theme-color" content="#12110f">
+  <link rel="icon" href="../favicon.ico">
+  <link rel="stylesheet" href="../style.css">
+  <script>
+    // Apply the saved theme before paint to avoid a flash.
+    (function () {
+      try {
+        var stored = localStorage.getItem('gs-theme');
+        if (stored === 'light' || stored === 'dark') {
+          document.documentElement.setAttribute('data-theme', stored);
+        } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
+</head>
+<body>
+  <main id="main" class="wrap">
+    <section class="page-hero">
+      <h1>Funnel Flatpak repository.</h1>
+      <p class="sec-lede">This directory is the OSTree repository and the source of <code>io.neptunepc.Funnel.flatpakrepo</code> for the Funnel Flatpak build. The three commands below add the remote, install the app, and start it.</p>
+
+      <div class="code">
+        <div class="code-head">
+          <span class="code-label">Install and run</span>
+          <button class="copy-btn" type="button" data-copy="flatpak remote-add --if-not-exists funnel https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo
+flatpak install funnel io.neptunepc.Funnel
+flatpak run io.neptunepc.Funnel" aria-label="Copy the Flatpak install commands">Copy</button>
+        </div>
+        <pre><code>flatpak remote-add --if-not-exists funnel https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo
+flatpak install funnel io.neptunepc.Funnel
+flatpak run io.neptunepc.Funnel</code></pre>
+      </div>
+
+      <p class="fineprint">The sandbox build has no tray icon and no login autostart. <a href="../index.html">Funnel site</a> &middot; <a href="../download.html">Download and requirements</a> &middot; <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">Source on GitHub</a></p>
+    </section>
+  </main>
+
+  <script src="../script.js"></script>
 </body>
+</html>

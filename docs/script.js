@@ -12,7 +12,7 @@
     root.setAttribute('data-theme', theme);
     try { localStorage.setItem('gs-theme', theme); } catch (e) { /* storage may be blocked */ }
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) { meta.setAttribute('content', theme === 'light' ? '#fbfcfc' : '#0a0b0d'); }
+    if (meta) { meta.setAttribute('content', theme === 'light' ? '#f3eee3' : '#12110f'); }
     toggles.forEach(function (btn) {
       btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
     });
@@ -111,32 +111,6 @@
 
   /* ---------- Reduced-motion preference ---------- */
   var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* ---------- Scroll reveal ---------- */
-  if (!prefersReduced && 'IntersectionObserver' in window) {
-    var revealSelectors = [
-      '.section-head', '.highlight', '.card', '.step', '.os-card', '.panel',
-      '.download-detail > *', '.cta-inner > *'
-    ].join(',');
-    var revealEls = document.querySelectorAll(revealSelectors);
-    if (revealEls.length) {
-      var revealObserver = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in');
-            revealObserver.unobserve(entry.target);
-          }
-        });
-      }, { rootMargin: '0px 0px -8% 0px', threshold: 0.1 });
-      Array.prototype.forEach.call(revealEls, function (el) {
-        el.classList.add('reveal');
-        var parent = el.parentNode;
-        var idx = parent ? Array.prototype.indexOf.call(parent.children, el) : 0;
-        el.style.transitionDelay = Math.min(idx, 6) * 55 + 'ms';
-        revealObserver.observe(el);
-      });
-    }
-  }
 
   /* ---------- Live sorting demo (home page) ---------- */
   function initSortDemo(demo) {

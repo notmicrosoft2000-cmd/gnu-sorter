@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Download — Funnel</title>
-  <meta name="description" content="Download Funnel. Linux: one-line installer. Windows: single-file native build. Both use custom per-folder sorting rules.">
-  <meta name="theme-color" content="#0a0b0d">
+  <title>Download Funnel for Linux or Windows</title>
+  <meta name="description" content="Install Funnel on Linux with Flatpak or the user-local script. The Windows build is a separate WinUI 3 repository. Requirements, update commands and removal paths are listed.">
+  <meta name="theme-color" content="#12110f">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Funnel — Download">
-  <meta property="og:description" content="Linux one-line installer and a native Windows build, both with custom per-folder rules.">
+  <meta property="og:title" content="Download Funnel for Linux or Windows">
+  <meta property="og:description" content="Flatpak commands for Linux, the user-local installer, and the separate WinUI 3 build for Windows.">
   <meta property="og:image" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/icon.png">
   <meta property="og:url" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/download.html">
   <link rel="icon" href="favicon.ico">
@@ -56,7 +56,7 @@
           <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
-        <a class="btn btn-primary btn-sm" href="download.html">Get Funnel</a>
+        <a class="btn btn--line btn--sm" href="download.html">Install</a>
         <button class="icon-button menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="primary-nav">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
@@ -65,152 +65,311 @@
   </header>
 
   <main id="main">
-    <!-- Page hero -->
-    <section class="page-hero container">
-      <p class="kicker">Download</p>
-      <h1>One app, two platforms.</h1>
-      <p class="lede">
-        Pick your platform. Linux installs with a single command; Windows is a single-file
-        native build. Both use the same rule-based, per-folder configuration.
-      </p>
-    </section>
-
-    <div class="rule" role="presentation"></div>
-
-    <!-- Platform options -->
-    <section class="section" id="options" style="padding-top:56px;">
-      <h2 class="visually-hidden">Platform options</h2>
-      <div class="container">
-        <div class="download-grid">
-          <article class="os-card featured">
-            <div class="os-card-head">
-              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" aria-hidden="true"><path d="M4 4h16v16H4Z" stroke="currentColor" stroke-width="1.6"/><path d="M4 4h16v16H4Z" stroke="#a3e635" stroke-width="1.2" opacity="0.35"/><path d="M8.5 8.5 11 11l-2.5 2.5M13 13.5h3" stroke="#a3e635" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <div>
-                <p class="os-tag">Linux &middot; one-line install</p>
-                <h3>Funnel for Linux</h3>
-              </div>
-            </div>
-            <p>
-              One command downloads the installer script, clones the repository, and sets Funnel
-              up for your user account. No manual steps, no sudo.
-            </p>
-            <div class="code-block">
-              <button class="copy-btn" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash" aria-label="Copy one-line Linux install command">Copy</button>
-              <pre><code>curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash</code></pre>
-            </div>
-            <p class="tiny">To also enable background watching when you sign in, add <code>--service</code>:</p>
-            <div class="code-block">
-              <button class="copy-btn" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash -s -- --service" aria-label="Copy Linux install command with service">Copy</button>
-              <pre><code>curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash -s -- --service</code></pre>
-            </div>
-            <ul class="os-checks">
-              <li>Installs into your user account — no root required</li>
-              <li>Desktop entry, icons, and KDE service menu included</li>
-              <li>Needs git and a standard Python 3 / GTK desktop runtime</li>
-            </ul>
-            <div class="os-actions">
-              <a class="btn btn-primary" href="docs.html">Linux documentation</a>
-              <a class="btn btn-outline" href="#manual">Manual steps</a>
-            </div>
-          </article>
-
-          <article class="os-card">
-            <div class="os-card-head">
-              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 9v11" stroke="#a3e635" stroke-width="1.6" opacity="0.6"/></svg>
-              <div>
-                <p class="os-tag">Windows &middot; native app</p>
-                <h3>Funnel for Windows</h3>
-              </div>
-            </div>
-            <p>
-              A native WinUI 3 build of Funnel. Download the single-file, self-contained
-              executable directly — there is no installer to run and no runtime to set up.
-            </p>
-            <div class="os-actions">
-              <a class="btn btn-primary btn-download" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows/releases/latest/download/gnu-sorter-windows.exe">
-                <span class="btn-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
-                Download for Windows
-              </a>
-              <a class="btn btn-outline" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows/releases" target="_blank" rel="noopener">Release notes</a>
-            </div>
-            <ul class="os-checks">
-              <li>Self-contained <code>.exe</code> — download and run</li>
-              <li>Windows 10 (1809+) and Windows 11</li>
-              <li>Same JSON configuration format as the Linux version</li>
-            </ul>
-            <p class="tiny">Binaries are published from the <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows" target="_blank" rel="noopener">gnu-sorter-windows</a> repository.</p>
-          </article>
+    <section class="page-hero">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">00</span>
+          <span class="rail-label">Download</span>
         </div>
-
-        <!-- Manual Linux steps -->
-        <section id="manual" class="download-detail" style="margin-top:56px;">
-          <h2 class="visually-hidden">Installation details</h2>
-          <article class="panel">
-            <p class="panel-tag">Linux &middot; manual</p>
-            <h3>Install step by step</h3>
-            <p>The one-line installer runs these steps for you. To do it by hand:</p>
-            <div class="code-block">
-              <button class="copy-btn" type="button" data-copy="git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git &amp;&amp; cd gnu-sorter" aria-label="Copy clone command">Copy</button>
-              <pre><code>git clone https://github.com/notmicrosoft2000-cmd/gnu-sorter.git &amp;&amp; cd gnu-sorter</code></pre>
-            </div>
-            <div class="code-block">
-              <button class="copy-btn" type="button" data-copy="./install.sh" aria-label="Copy install command">Copy</button>
-              <pre><code>./install.sh</code></pre>
-            </div>
-            <p class="tiny">Add <code>--service</code> to enable background watching on login. Uninstall with <code>./uninstall.sh</code>.</p>
-          </article>
-
-          <article class="panel">
-            <p class="panel-tag">Both platforms</p>
-            <h3>After installing</h3>
-            <p>Configuration is plain JSON and lives in the standard per-user locations:</p>
-            <ul class="checklist">
-              <li><b>Linux</b> — <code>~/.config/gnu-sorter/</code> (rules, roots, settings), <code>~/.local/share/gnu-sorter/</code> (history)</li>
-              <li><b>Windows</b> — <code>%APPDATA%\gnu-sorter\</code> (rules, roots, settings), <code>%LOCALAPPDATA%\gnu-sorter\</code> (history)</li>
-              <li>Set up rules, per-folder rulesets, and presets: <a class="prose" href="docs.html">read the documentation</a></li>
-            </ul>
-          </article>
-        </section>
-      </div>
-    </section>
-
-    <!-- Screenshots -->
-    <section class="section" id="screens" data-shots-section>
-      <div class="container">
-        <div class="section-head">
-          <p class="kicker">The app</p>
-          <h2>Know what you're getting.</h2>
-          <p class="section-sub">Screenshots from the Linux (GTK4 / libadwaita) build. The native Windows build offers the same four areas and the same rules.</p>
-        </div>
-        <div class="gallery">
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-folders.png" alt="The Folders tab, listing the folders Funnel watches." loading="lazy" data-shot></div>
-            <figcaption><b>Folders</b> &mdash; add the directories to keep organized.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-rules.png" alt="The Rules page, mapping extensions and name patterns to destinations." loading="lazy" data-shot></div>
-            <figcaption><b>Rules</b> &mdash; send each file type where it belongs.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page showing files as they are sorted." loading="lazy" data-shot></div>
-            <figcaption><b>Activity</b> &mdash; watch files sort themselves.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-settings.png" alt="The Settings page with presets and watching options." loading="lazy" data-shot></div>
-            <figcaption><b>Settings</b> &mdash; presets, watching and startup.</figcaption>
-          </figure>
+        <div class="rail-body">
+          <h1>Install Funnel on Linux or Windows.</h1>
+          <p class="sec-lede">The Flatpak build is the primary Linux package. A user-local script installs under your home directory. The Windows build is a separate WinUI 3 application.</p>
+          <p class="fineprint">Version 3.0 is in development. Requirements and commands below match the current repository.</p>
         </div>
       </div>
     </section>
 
-    <!-- Final call to action -->
-    <section class="cta-final">
-      <div class="container cta-inner">
-        <h2>Your files. Your rules. Automatically organized.</h2>
-        <p>Get Funnel running and configure your first sorting rules in a couple of minutes.</p>
-        <div class="cta-actions">
-          <a class="btn btn-primary btn-lg" href="docs.html">Read the docs</a>
-          <a class="btn btn-outline btn-lg" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">Explore the Source</a>
+    <section class="band" id="flatpak">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">01</span>
+          <span class="rail-label">Flatpak</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Linux, Flatpak.</h2>
+            <p class="sec-lede">The Flatpak build is the primary Linux package. Run these three commands in order. The first adds the project repository, the second installs the app, and the third starts it.</p>
+          </header>
+
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Add the repository</span>
+              <button class="copy-btn" type="button" data-copy="flatpak remote-add --if-not-exists funnel https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo" aria-label="Copy the remote-add command">Copy</button>
+            </div>
+            <pre><code>flatpak remote-add --if-not-exists funnel https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo</code></pre>
+          </div>
+
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Install</span>
+              <button class="copy-btn" type="button" data-copy="flatpak install funnel io.neptunepc.Funnel" aria-label="Copy the install command">Copy</button>
+            </div>
+            <pre><code>flatpak install funnel io.neptunepc.Funnel</code></pre>
+          </div>
+
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Run</span>
+              <button class="copy-btn" type="button" data-copy="flatpak run io.neptunepc.Funnel" aria-label="Copy the run command">Copy</button>
+            </div>
+            <pre><code>flatpak run io.neptunepc.Funnel</code></pre>
+          </div>
+
+          <div class="note">
+            <span class="note-label">First launch</span>
+            <p>The window opens on the Folders page. Add a folder, then write a rule for it. The Flatpak ships its own GNOME runtime, so the Python and GTK4 libraries come with the package.</p>
+          </div>
+
+          <div class="note">
+            <span class="note-label">Sandbox</span>
+            <p>The Flatpak build has no tray icon and no login autostart. The sandbox does not allow either. Start Funnel from the launcher, or run a sweep with <code>flatpak run io.neptunepc.Funnel --sweep</code>.</p>
+          </div>
+
+          <p class="fineprint">The <a href="#manual">user-local install</a> path does not use Flatpak and installs under your home directory.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="manual">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">02</span>
+          <span class="rail-label">User-local</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Linux, user-local install.</h2>
+            <p class="sec-lede">This path installs under your home directory and does not need root. The script downloads a copy of the repository, runs <code>install.sh</code>, and leaves a launcher, icons and a service unit.</p>
+          </header>
+
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Install</span>
+              <button class="copy-btn" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash" aria-label="Copy the user-local install command">Copy</button>
+            </div>
+            <pre><code>curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash</code></pre>
+          </div>
+
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Install and start the watcher</span>
+              <button class="copy-btn" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash -s -- --service" aria-label="Copy the user-local install command with the service flag">Copy</button>
+            </div>
+            <pre><code>curl -fsSL https://raw.githubusercontent.com/notmicrosoft2000-cmd/gnu-sorter/main/install-gnu-sorter.sh | bash -s -- --service</code></pre>
+          </div>
+
+          <p class="fineprint">The app goes to <code>~/.local/share/gnu-sorter/app/</code> and the CLI to <code>~/.local/bin/gnu-sorter</code>. Updates run with <code>gnu-sorter --update</code> and removal uses <code>./uninstall.sh</code> from a clone of the repository. Both are shown in section 05 with their flags.</p>
+
+          <div class="note">
+            <span class="note-label">Service</span>
+            <p>The second form passes <code>--service</code> to the installer. The installer always writes the <code>gnu-sorter.service</code> systemd user unit; with the flag it also enables and starts that unit.</p>
+          </div>
+
+          <p class="fineprint">The installer needs bash and git. A desktop session with GTK4 and libadwaita is required to start the window.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="windows">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">03</span>
+          <span class="rail-label">Windows</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Windows, WinUI 3 build.</h2>
+            <p class="sec-lede">The Windows build is a separate repository with a WinUI 3 interface. It has the same four areas, Folders, Rules, Activity and Settings, and the same GPL-3.0 license. The releases page lists the current executable; the repository carries the source.</p>
+          </header>
+
+          <div class="paths">
+            <div class="path">
+              <span class="path-name">Repository</span>
+              <div class="path-body">
+                <p>Source, issues and build instructions for the WinUI 3 application.</p>
+              </div>
+              <a class="path-link" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows" target="_blank" rel="noopener">Open repository</a>
+            </div>
+            <div class="path">
+              <span class="path-name">Releases</span>
+              <div class="path-body">
+                <p>Current executable and release notes. The direct link points at the latest published executable.</p>
+              </div>
+              <a class="path-link" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows/releases" target="_blank" rel="noopener">Release notes</a>
+            </div>
+            <div class="path">
+              <span class="path-name">Latest executable</span>
+              <div class="path-body">
+                <p>The latest asset named <code>gnu-sorter-windows.exe</code> in the Windows repository.</p>
+              </div>
+              <a class="path-link" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows/releases/latest/download/gnu-sorter-windows.exe" target="_blank" rel="noopener">Download .exe</a>
+            </div>
+          </div>
+
+          <p class="fineprint">This page does not describe an installer for the Windows build. Check the repository's current release notes before you run it.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="requirements">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">04</span>
+          <span class="rail-label">Requirements</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Requirements and verification.</h2>
+            <p class="sec-lede">The Linux source package declares Python 3.11 or newer in <code>pyproject.toml</code>. The Flatpak carries its own GNOME runtime. Both Linux paths need GTK4 and libadwaita at run time.</p>
+          </header>
+
+          <div class="cols">
+            <div>
+              <dl class="spec">
+                <div class="spec-row">
+                  <dt>Linux runtime</dt>
+                  <dd>GTK4 and libadwaita</dd>
+                </div>
+                <div class="spec-row">
+                  <dt>Python</dt>
+                  <dd>3.11 or newer, as declared in pyproject.toml</dd>
+                </div>
+                <div class="spec-row">
+                  <dt>Config</dt>
+                  <dd>~/.config/gnu-sorter/</dd>
+                </div>
+                <div class="spec-row">
+                  <dt>Journal</dt>
+                  <dd>~/.local/share/gnu-sorter/history.log</dd>
+                </div>
+                <div class="spec-row">
+                  <dt>App files</dt>
+                  <dd>~/.local/share/gnu-sorter/app/ after a user-local install</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div>
+              <div class="code">
+                <div class="code-head">
+                  <span class="code-label">Verify</span>
+                  <button class="copy-btn" type="button" data-copy="gnu-sorter --version
+gnu-sorter --list-rules" aria-label="Copy the version and rule list commands">Copy</button>
+                </div>
+                <pre><code>gnu-sorter --version
+gnu-sorter --list-rules</code></pre>
+              </div>
+              <p class="fineprint">Inside the Flatpak, prefix a command with <code>flatpak run io.neptunepc.Funnel</code>. For example, <code>flatpak run io.neptunepc.Funnel --version</code> prints the packaged version.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="updating">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">05</span>
+          <span class="rail-label">Updating</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Updating and removing.</h2>
+            <p class="sec-lede">A Flatpak update comes from the project repository you added in section 01. A user-local install updates from GitHub Releases.</p>
+          </header>
+
+          <div class="cols">
+            <div>
+              <div class="code">
+                <div class="code-head">
+                  <span class="code-label">Flatpak</span>
+                  <button class="copy-btn" type="button" data-copy="flatpak update io.neptunepc.Funnel
+flatpak uninstall io.neptunepc.Funnel" aria-label="Copy the Flatpak update and uninstall commands">Copy</button>
+                </div>
+                <pre><code>flatpak update io.neptunepc.Funnel
+flatpak uninstall io.neptunepc.Funnel</code></pre>
+              </div>
+            </div>
+
+            <div>
+              <div class="code">
+                <div class="code-head">
+                  <span class="code-label">User-local</span>
+                  <button class="copy-btn" type="button" data-copy="gnu-sorter --update-check
+gnu-sorter --update" aria-label="Copy the update check and update commands">Copy</button>
+                </div>
+                <pre><code>gnu-sorter --update-check
+gnu-sorter --update</code></pre>
+              </div>
+            </div>
+          </div>
+          <p class="fineprint"><code>--update-check</code> reports the newest build on the current channel. <code>--update</code> downloads and installs it. If the watcher service is running, the command prints the systemctl restart line to apply the update.</p>
+
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Remove a user-local install</span>
+              <button class="copy-btn" type="button" data-copy="./uninstall.sh
+./uninstall.sh --purge" aria-label="Copy the uninstall commands">Copy</button>
+            </div>
+            <pre><code>./uninstall.sh
+./uninstall.sh --purge</code></pre>
+          </div>
+          <p class="fineprint">Run the uninstall script from a clone of the repository. The first form keeps config and history. <code>--purge</code> also removes <code>~/.config/gnu-sorter/</code> and <code>~/.local/share/gnu-sorter/history.log</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="screens" data-shots-section>
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">06</span>
+          <span class="rail-label">Screens</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Five screens from the Linux build.</h2>
+            <p class="sec-lede">The GTK4 interface. The Windows build has the same areas with WinUI 3 controls, so the workflow matches even when the controls differ.</p>
+          </header>
+
+          <div class="gallery">
+            <figure class="shot shot--7">
+              <div class="shot-media"><img src="images/app-folders.png" alt="The Folders page in Funnel, listing watched directories with a rule count next to each." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">01</span><span><b>Folders.</b> Directories to watch, with the number of rules on each one.</span></figcaption>
+            </figure>
+            <figure class="shot shot--5">
+              <div class="shot-media"><img src="images/app-rules.png" alt="The Rules page showing a folder's rules with extensions and destinations." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">02</span><span><b>Rules.</b> The rule list for one folder, in priority order.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-advanced-rules.png" alt="The advanced editor showing a rule as JSON." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">03</span><span><b>Advanced editor.</b> The same rule as JSON, with the fields exposed.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">04</span><span><b>Activity.</b> The journal as a searchable list of moves.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-settings.png" alt="The Settings page with preset, watch and startup options." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">05</span><span><b>Settings.</b> Presets, watch behavior and startup options.</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="help">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">07</span>
+          <span class="rail-label">Help</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">If something breaks.</h2>
+            <p class="sec-lede">The troubleshooting section covers the common failures first. If the problem is not listed there, open an issue with the version, the command you ran, and the relevant journal lines.</p>
+          </header>
+
+          <p class="fineprint">Read <a href="docs.html#troubleshooting">troubleshooting in the documentation</a>, or <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter/issues" target="_blank" rel="noopener">open an issue on GitHub</a>. Include <code>gnu-sorter --version</code> and the last lines of <code>~/.local/share/gnu-sorter/history.log</code> when a move is involved.</p>
         </div>
       </div>
     </section>
@@ -218,7 +377,7 @@
 
   <footer class="site-footer">
     <h2 class="visually-hidden">Site footer</h2>
-    <div class="container footer-grid">
+    <div class="wrap footer-grid">
       <div class="footer-brand">
         <a class="brand" href="index.html" aria-label="Funnel home">
           <span class="brand-mark" aria-hidden="true">
@@ -229,7 +388,11 @@
           </span>
           <span class="brand-text">Funnel</span>
         </a>
-        <p>An advanced, open-source file-sorting utility for keeping your directories organized with custom rules.</p>
+        <p>A file sorter for Linux and Windows. Rules are per folder, moves are journaled, and undo is one command.</p>
+        <p class="footer-meta">
+          <span>Version 3.0 in development</span>
+          <span>GPL-3.0</span>
+        </p>
       </div>
 
       <nav class="footer-col" aria-label="Product">
@@ -256,9 +419,9 @@
       </nav>
     </div>
 
-    <div class="container footer-bottom">
+    <div class="wrap footer-bottom">
       <p>&copy; <span id="year">2026</span> notmicrosoft2000-cmd &middot; Funnel &middot; GPL-3.0</p>
-      <p class="footer-tag">Your files. Your rules. Automatically organized.</p>
+      <p class="footer-tag">Per-folder rules. Journaled moves.</p>
     </div>
   </footer>
 

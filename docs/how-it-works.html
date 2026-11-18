@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>How it works — Funnel</title>
-  <meta name="description" content="How Funnel organizes files: choose a folder, define rules, and let it sort — from the GUI or the command line.">
-  <meta name="theme-color" content="#0a0b0d">
+  <title>How Funnel works: folders, rules and the journal</title>
+  <meta name="description" content="Funnel watches a folder, matches each new file against that folder's rules, moves the file, and appends the move to a journal that undo can reverse.">
+  <meta name="theme-color" content="#12110f">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Funnel — How it works">
-  <meta property="og:description" content="Three steps to a folder that sorts itself, plus the GUI and CLI workflows.">
+  <meta property="og:title" content="How Funnel works: folders, rules and the journal">
+  <meta property="og:description" content="A folder, a rule list, a sweep or a watcher, and one journal line per move. The mechanics of Funnel in five steps.">
   <meta property="og:image" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/icon.png">
   <meta property="og:url" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/how-it-works.html">
   <link rel="icon" href="favicon.ico">
@@ -56,7 +56,7 @@
           <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
-        <a class="btn btn-primary btn-sm" href="download.html">Get Funnel</a>
+        <a class="btn btn--line btn--sm" href="download.html">Install</a>
         <button class="icon-button menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="primary-nav">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
@@ -65,157 +65,294 @@
   </header>
 
   <main id="main">
-    <!-- Page hero -->
-    <section class="page-hero container">
-      <p class="kicker">How it works</p>
-      <h1>Three steps to a folder that sorts itself.</h1>
-      <p class="lede">
-        Funnel replaces the repetitive part of keeping folders tidy. Set it up once,
-        then let the rules handle the routine — from the GUI or the command line.
-      </p>
-      <div class="page-hero-actions">
-        <a class="btn btn-primary" href="download.html">Get Funnel</a>
-        <a class="btn btn-outline" href="features.html">Explore the features</a>
-      </div>
-    </section>
-
-    <div class="rule" role="presentation"></div>
-
-    <!-- The process -->
-    <section class="section" id="steps">
-      <h2 class="visually-hidden">The sorting process</h2>
-      <div class="container">
-        <ol class="steps">
-          <li class="step">
-            <span class="step-num">01</span>
-            <h3>Choose a directory</h3>
-            <p>Select the folder where incoming files should be organized.</p>
-          </li>
-          <li class="step">
-            <span class="step-num">02</span>
-            <h3>Define your rules</h3>
-            <p>Describe how matching files should be sorted and where they should go.</p>
-          </li>
-          <li class="step">
-            <span class="step-num">03</span>
-            <h3>Let the rules do the work</h3>
-            <p>Files are organized according to the workflow you configured.</p>
-          </li>
-        </ol>
-
-        <figure class="viz" data-viz="pipeline">
-          <figcaption class="viz-cap"><b>Watch &rarr; match &rarr; move &rarr; journal.</b> The same four steps run whether you click a button or run a command.</figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <div class="rule" role="presentation"></div>
-
-    <!-- GUI vs CLI -->
-    <section class="section" id="interfaces">
-      <div class="container">
-        <div class="section-head">
-          <p class="kicker">Two ways to work</p>
-          <h2>Use the interface that suits your habits.</h2>
-          <p class="section-sub">Both modes work from the same configuration, so you can start visually and automate later.</p>
+    <section class="page-hero">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">00</span>
+          <span class="rail-label">How it works</span>
         </div>
+        <div class="rail-body">
+          <h1>How Funnel sorts a folder.</h1>
+          <p class="sec-lede">Funnel reads a folder by the rules attached to it. A sweep or a watcher moves matching files, and each move is written to a journal. Undo reads that journal and puts a file back.</p>
+          <p class="fineprint">This page describes the GTK4 build. The Windows build has the same four areas: Folders, Rules, Activity, Settings.</p>
+        </div>
+      </div>
+    </section>
 
-        <div class="two-up">
-          <article class="panel">
-            <p class="panel-tag">GUI</p>
-            <h3>A visual way to configure sorting</h3>
-            <p>
-              Add folders, write rules, and apply presets from a desktop application. It is a comfortable
-              fit for setting things up the first time and for adjusting rules as your folders change.
-            </p>
-            <ul class="checklist">
-              <li>Manage folders and rules side by side</li>
-              <li>Guided rule setup plus an advanced editor</li>
-              <li>Presets to start from a sensible baseline</li>
-            </ul>
-          </article>
+    <section class="band" id="add-folder">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">01</span>
+          <span class="rail-label">Add a folder</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Add a folder and choose its scope.</h2>
+            <p class="sec-lede">Funnel needs two things from you: a directory and a scope. The scope decides whether the folder follows the shared template or keeps a list of its own.</p>
+          </header>
 
-          <article class="panel">
-            <p class="panel-tag">CLI</p>
-            <h3>A command-line workflow</h3>
-            <p>
-              For terminal users and automation, the same sorting can be driven from the command line.
-              Commands below are taken from the project README.
-            </p>
-            <div class="terminal" aria-label="Example command-line usage">
-              <div class="terminal-bar" aria-hidden="true"><span></span><span></span><span></span></div>
-              <pre><code><span class="cmt"># preview rules</span>
-gnu-sorter --list-rules
+          <div class="prose">
+            <p>Open Folders and add a path. <code>~/Downloads</code> is a common first choice. The folder must be readable and writable by your user account. A permission error on one file appears in the terminal and does not stop the rest of the sweep.</p>
+            <p>A folder on the shared template inherits the default rule list. A folder with its own rules keeps a separate list. To put a folder back on the template, run <code>gnu-sorter --attach-rules --root ~/Downloads</code>.</p>
+          </div>
 
-<span class="cmt"># sort a folder once</span>
-gnu-sorter --sweep
+          <div class="note">
+            <span class="note-label">Scope</span>
+            <p>The choice is per folder. Two watched folders can use different rules at the same time.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<span class="cmt"># watch for new files</span>
-gnu-sorter --watch</code></pre>
+    <section class="band" id="write-rule">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">02</span>
+          <span class="rail-label">Write a rule</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Write a rule in the wizard or the editor.</h2>
+            <p class="sec-lede">Both paths write the same rule object. The wizard asks for the fields in order. The advanced editor shows the JSON and accepts direct edits.</p>
+          </header>
+
+          <ol class="seq">
+            <li class="seq-item">
+              <span class="seq-index">01</span>
+              <div>
+                <h3 class="seq-title">Use the wizard</h3>
+                <p class="seq-text">Open Rules and choose the folder. Pick extensions, a name pattern, or both. Take the suggested destination or choose another one. Set size or age limits, then priority and scope. The last step lists the files the rule would move. Save writes the rule.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">02</span>
+              <div>
+                <h3 class="seq-title">Use the advanced editor</h3>
+                <p class="seq-text">Open the same rule as JSON and edit the fields: name, extensions, match pattern, destination, priority, and limits. Save validates the object. <code>--export-rules</code> and <code>--import-rules</code> move a rule list between machines.</p>
+              </div>
+            </li>
+          </ol>
+
+          <p class="fineprint">The field names and match modes are listed in the <a href="docs.html#rules">rules reference</a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="sweep">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">03</span>
+          <span class="rail-label">Sweep and journal</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Run a sweep, or leave the watcher on.</h2>
+            <p class="sec-lede">A sweep sorts what is already in each folder. The watcher keeps running and sorts files as they arrive. Both append to the same journal.</p>
+          </header>
+
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Sort and undo</span>
+              <button class="copy-btn" type="button" data-copy="gnu-sorter --sweep
+gnu-sorter --watch
+gnu-sorter --undo-last 1" aria-label="Copy the sweep, watch and undo commands">Copy</button>
             </div>
-            <p class="tiny">Example usage from the README. Run <code>gnu-sorter --help</code> for the full, current reference.</p>
-          </article>
-        </div>
+            <pre><code>gnu-sorter --sweep
+gnu-sorter --watch
+gnu-sorter --undo-last 1</code></pre>
+          </div>
 
-        <figure class="viz" data-viz="rules" style="margin-top:26px;">
-          <figcaption class="viz-cap"><b>One ruleset, two interfaces.</b> Rules you set visually behave identically on the command line.</figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <!-- Screenshots -->
-    <section class="section" id="screens" data-shots-section>
-      <div class="container">
-        <div class="section-head">
-          <p class="kicker">See it run</p>
-          <h2>The rules at work.</h2>
-          <p class="section-sub">Watch files land, review what moved, and adjust the rules at any time. Screenshots from the Linux (GTK4) build.</p>
-        </div>
-        <div class="gallery">
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page showing files as they are sorted." loading="lazy" data-shot></div>
-            <figcaption><b>Activity</b> &mdash; a live record of files as they are sorted.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-folders.png" alt="The Folders tab, listing the folders Funnel watches." loading="lazy" data-shot></div>
-            <figcaption><b>Folders</b> &mdash; point it at a folder and let the rules take over.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-1.png" alt="Rule wizard step 1: choosing what to tidy." loading="lazy" data-shot></div>
-            <figcaption><b>Wizard, step 1</b> &mdash; what are we tidying?</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-2.png" alt="Rule wizard step 2: choosing what to catch." loading="lazy" data-shot></div>
-            <figcaption><b>Wizard, step 2</b> &mdash; what should it catch?</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-3.png" alt="Rule wizard step 3: choosing a destination." loading="lazy" data-shot></div>
-            <figcaption><b>Wizard, step 3</b> &mdash; a suggested destination.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-4.png" alt="Rule wizard step 4: fine-tuning the rule." loading="lazy" data-shot></div>
-            <figcaption><b>Wizard, step 4</b> &mdash; fine-tune size, age and match mode.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-5.png" alt="Rule wizard step 5: priority and scope." loading="lazy" data-shot></div>
-            <figcaption><b>Wizard, step 5</b> &mdash; priority and scope.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="shot-media"><img src="images/app-wizard-6.png" alt="Rule wizard step 6: review with a preview of affected files." loading="lazy" data-shot></div>
-            <figcaption><b>Wizard, step 6</b> &mdash; review with proof.</figcaption>
-          </figure>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">history.log, one line per move</span>
+              <button class="copy-btn" type="button" data-copy='{"v": 2, "id": "6f1c9a0e4b2d", "ts": "2026-11-18 14:22:07", "src": "/home/you/Downloads/report_final_v2.pdf", "dest": "/home/you/Documents/report_final_v2.pdf", "size": 482113, "mtime": 1763475727.4, "rule": "documents", "root": "/home/you/Downloads", "batch": "a1b2c3d4"}' aria-label="Copy one journal line">Copy</button>
+            </div>
+            <pre><code>{"v": 2, "id": "6f1c9a0e4b2d", "ts": "2026-11-18 14:22:07", "src": "/home/you/Downloads/report_final_v2.pdf", "dest": "/home/you/Documents/report_final_v2.pdf", "size": 482113, "mtime": 1763475727.4, "rule": "documents", "root": "/home/you/Downloads", "batch": "a1b2c3d4"}</code></pre>
+          </div>
+          <p class="fineprint"><code>--sweep</code> exits when the folders are done. <code>--watch</code> stays in the foreground. <code>--undo-last 1</code> reverses one journal entry; pass a larger number to reverse more.</p>
+          <p class="fineprint">The journal lives at <code>~/.local/share/gnu-sorter/history.log</code>. An entry records the source, destination, size, modification time, rule, watched root, and batch id. When the file passes about 1 MB, Funnel backs it up and keeps the most recent 2,500 entries.</p>
         </div>
       </div>
     </section>
 
-    <!-- Final call to action -->
-    <section class="cta-final">
-      <div class="container cta-inner">
-        <h2>Start with one folder and one rule.</h2>
-        <p>Install Funnel, point it at your Downloads folder, and watch the first batch land where it belongs.</p>
-        <div class="cta-actions">
-          <a class="btn btn-primary btn-lg" href="download.html">Get Funnel</a>
-          <a class="btn btn-outline btn-lg" href="docs.html">Read the docs</a>
+    <section class="band" id="on-a-move">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">04</span>
+          <span class="rail-label">On a move</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">What happens on a move.</h2>
+            <p class="sec-lede">The order is fixed. A file passes through these steps once per sweep or watcher event.</p>
+          </header>
+
+          <ol class="seq">
+            <li class="seq-item">
+              <span class="seq-index">01</span>
+              <div>
+                <h3 class="seq-title">File detected</h3>
+                <p class="seq-text">A watcher event or a sweep scan finds a regular file. Dotfiles, directories and symlinks are left alone.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">02</span>
+              <div>
+                <h3 class="seq-title">Stability window</h3>
+                <p class="seq-text">Funnel reads the size and modification time, waits, then reads them again. A file that is still changing is held for the next pass instead of moved mid-write.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">03</span>
+              <div>
+                <h3 class="seq-title">First matching rule</h3>
+                <p class="seq-text">Rules are checked in priority order. The first match decides the destination. If no rule matches, the file goes to <code>Needs-review</code>.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">04</span>
+              <div>
+                <h3 class="seq-title">Collision-safe rename</h3>
+                <p class="seq-text">If the destination already has that name, Funnel adds a number: <code>report_final_v2.pdf</code> becomes <code>report_final_v2 (1).pdf</code>. The sort path never overwrites a file at the destination.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">05</span>
+              <div>
+                <h3 class="seq-title">Journal entry appended</h3>
+                <p class="seq-text">Funnel writes one JSON line with the source, destination, size, modification time, rule, root and batch id. The append happens before the move is reported as done.</p>
+              </div>
+            </li>
+            <li class="seq-item">
+              <span class="seq-index">06</span>
+              <div>
+                <h3 class="seq-title">Undo reverses it</h3>
+                <p class="seq-text"><code>gnu-sorter --undo-last 1</code> reads the newest entry and moves the file back to its source. <code>--restore</code> takes filters and a dry run for larger reversals.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="failure-modes">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">05</span>
+          <span class="rail-label">Failure modes</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Where it can go wrong.</h2>
+            <p class="sec-lede">These are the cases the app handles by design. A failed file is reported and the rest of the sweep continues.</p>
+          </header>
+
+          <dl class="spec">
+            <div class="spec-row">
+              <dt>In-progress file</dt>
+              <dd>Held while the size and modification time change. Download suffixes are held too. The file waits for a later pass.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>Name collision</dt>
+              <dd>Renamed with a number in parentheses. The sort path never overwrites a file at the destination.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>Permission error</dt>
+              <dd>Printed to stderr with the path. The remaining files in the sweep still run.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>Flatpak sandbox</dt>
+              <dd>No tray icon and no login autostart. The sandbox does not allow either. Start Funnel yourself, or run a sweep from a terminal.</dd>
+            </div>
+            <div class="spec-row">
+              <dt>Wrong move</dt>
+              <dd>Reversed from the journal with <code>--undo-last</code> or <code>--restore</code>. The source path is recorded in the entry.</dd>
+            </div>
+          </dl>
+
+          <div class="note">
+            <span class="note-label">Journal</span>
+            <p>If the journal cannot be written, the move is not recorded and undo has nothing to reverse. Check that <code>~/.local/share/gnu-sorter/</code> is writable.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="screens" data-shots-section>
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">06</span>
+          <span class="rail-label">Screens</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">The same steps in the interface.</h2>
+            <p class="sec-lede">Screens from the GTK4 build. Each plate shows one part of the sequence: a folder, a rule, the wizard, the activity list.</p>
+          </header>
+
+          <div class="gallery">
+            <figure class="shot shot--7">
+              <div class="shot-media"><img src="images/app-folders.png" alt="The Folders page in Funnel, listing watched directories with a rule count next to each." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">01</span><span><b>Folders.</b> Watched directories with the number of rules on each one.</span></figcaption>
+            </figure>
+            <figure class="shot shot--5">
+              <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">02</span><span><b>Activity.</b> The journal as a searchable list of moves.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-1.png" alt="Rule wizard step 1, choosing the folder to tidy." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">03</span><span><b>Wizard 1.</b> Choose the folder that the rule belongs to.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-2.png" alt="Rule wizard step 2, choosing extensions and name patterns to catch." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">04</span><span><b>Wizard 2.</b> Pick extensions, a name pattern, or both.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-3.png" alt="Rule wizard step 3, showing a suggested destination folder." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">05</span><span><b>Wizard 3.</b> Accept the suggested destination or choose another one.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-4.png" alt="Rule wizard step 4, setting size and age limits and the match mode." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">06</span><span><b>Wizard 4.</b> Size and age limits, plus the match mode.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-5.png" alt="Rule wizard step 5, setting rule priority and scope." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">07</span><span><b>Wizard 5.</b> Priority and scope for the new rule.</span></figcaption>
+            </figure>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/app-wizard-6.png" alt="Rule wizard step 6, reviewing the files the rule would move." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">08</span><span><b>Wizard 6.</b> The preview lists the files before the rule is saved.</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="install">
+      <div class="wrap rail-grid">
+        <div class="rail">
+          <span class="rail-index">07</span>
+          <span class="rail-label">Install</span>
+        </div>
+        <div class="rail-body">
+          <header class="sec-head">
+            <h2 class="sec-title">Install Funnel, then add one folder.</h2>
+            <p class="sec-lede">The Flatpak build is the primary Linux package. These commands add the project repository, install the app, and start it. The <a href="download.html">download page</a> covers the user-local and Windows builds.</p>
+          </header>
+
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Linux, Flatpak</span>
+              <button class="copy-btn" type="button" data-copy="flatpak remote-add --if-not-exists funnel https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo
+flatpak install funnel io.neptunepc.Funnel
+flatpak run io.neptunepc.Funnel" aria-label="Copy the Flatpak install commands">Copy</button>
+            </div>
+            <pre><code>flatpak remote-add --if-not-exists funnel https://notmicrosoft2000-cmd.github.io/gnu-sorter/flatpak/io.neptunepc.Funnel.flatpakrepo
+flatpak install funnel io.neptunepc.Funnel
+flatpak run io.neptunepc.Funnel</code></pre>
+          </div>
+
+          <p class="fineprint">After the first launch, add a folder on the Folders page. The <a href="docs.html">documentation</a> covers the command line, rule fields and troubleshooting. The source is on <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">GitHub</a>.</p>
         </div>
       </div>
     </section>
@@ -223,7 +360,7 @@ gnu-sorter --watch</code></pre>
 
   <footer class="site-footer">
     <h2 class="visually-hidden">Site footer</h2>
-    <div class="container footer-grid">
+    <div class="wrap footer-grid">
       <div class="footer-brand">
         <a class="brand" href="index.html" aria-label="Funnel home">
           <span class="brand-mark" aria-hidden="true">
@@ -234,7 +371,11 @@ gnu-sorter --watch</code></pre>
           </span>
           <span class="brand-text">Funnel</span>
         </a>
-        <p>An advanced, open-source file-sorting utility for keeping your directories organized with custom rules.</p>
+        <p>A file sorter for Linux and Windows. Rules are per folder, moves are journaled, and undo is one command.</p>
+        <p class="footer-meta">
+          <span>Version 3.0 in development</span>
+          <span>GPL-3.0</span>
+        </p>
       </div>
 
       <nav class="footer-col" aria-label="Product">
@@ -261,9 +402,9 @@ gnu-sorter --watch</code></pre>
       </nav>
     </div>
 
-    <div class="container footer-bottom">
+    <div class="wrap footer-bottom">
       <p>&copy; <span id="year">2026</span> notmicrosoft2000-cmd &middot; Funnel &middot; GPL-3.0</p>
-      <p class="footer-tag">Your files. Your rules. Automatically organized.</p>
+      <p class="footer-tag">Per-folder rules. Journaled moves.</p>
     </div>
   </footer>
 
