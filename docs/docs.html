@@ -88,7 +88,7 @@
   <main id="main">
     <div class="wrap docs-head">
       <h1>Funnel documentation</h1>
-      <p class="docs-intro">Funnel is a GPL-3.0 file sorter for Linux and Windows, version 3.0. It watches the folders you add and moves each file to the folder its first matching rule names. Rules are per folder, every move is journaled, and a restore can put a file back.</p>
+      <p class="docs-intro">Funnel is a GPL-3.0 file sorter for Linux and Windows, version 3.1. It watches the folders you add and moves each file to the folder its first matching rule names. Rules are per folder, every move is journaled, and a restore can put a file back.</p>
     </div>
 
     <div class="wrap docs-layout">
@@ -178,7 +178,7 @@ flatpak run io.neptunepc.Funnel" aria-label="Copy the Flatpak install commands">
 <span class="prompt" aria-hidden="true">$</span> flatpak install funnel io.neptunepc.Funnel
 <span class="prompt" aria-hidden="true">$</span> flatpak run io.neptunepc.Funnel</code></pre>
           </div>
-          <p class="fineprint">Updates arrive with <code>flatpak update io.neptunepc.Funnel</code>. The sandbox does not allow a tray icon or login autostart, so neither is part of this build. <a href="download.html">Other install paths</a>.</p>
+          <p class="fineprint">Updates arrive with <code>flatpak update io.neptunepc.Funnel</code>. This build leaves out the optional tray helper and has no built-in autostart. <a href="download.html">Other install paths</a>.</p>
 
           <h3>User-local install</h3>
           <p>The script installs into the current user's home directory. It copies the app to <code>~/.local/share/gnu-sorter/app</code>, links <code>~/.local/bin/gnu-sorter</code>, and writes the desktop entry, icons, KDE service menu and systemd user unit.</p>
@@ -264,14 +264,14 @@ flatpak run io.neptunepc.Funnel" aria-label="Copy the Flatpak install commands">
               <span class="seq-index">01</span>
               <div>
                 <h3 class="seq-title">Add a folder</h3>
-                <p class="seq-text">Open <strong>Folders</strong>, then <strong>Add Folder</strong>. Pick a folder your user account owns, for example <code>~/Downloads</code>.</p>
+                <p class="seq-text">Open <strong>Inputs</strong>, then <strong>Add folder</strong>. Pick a folder your user account owns, for example <code>~/Downloads</code>.</p>
               </div>
             </li>
             <li class="seq-item">
               <span class="seq-index">02</span>
               <div>
                 <h3 class="seq-title">Add a rule</h3>
-                <p class="seq-text"><strong>Rules</strong>, then <strong>Add Rule</strong> opens the wizard. A rule needs a destination name and at least one condition.</p>
+                <p class="seq-text"><strong>Plan</strong>, then <strong>Add Rule</strong> opens the wizard. A rule needs a destination name and at least one condition.</p>
               </div>
             </li>
             <li class="seq-item">
@@ -326,39 +326,27 @@ gnu-sorter --undo-last 1" aria-label="Copy the watch and undo commands">Copy</bu
         <section id="interface" class="docs-section" data-shots-section>
           <header class="sec-head">
             <h2>The interface</h2>
-            <p class="sec-lede">The GTK4 build has five areas: Folders, Rules, Activity, Settings and About. The Windows build has the same four working areas with WinUI 3 controls.</p>
+            <p class="sec-lede">The GTK4 desk has three views: Plan, Inputs and Log. Settings and About open as dialogs. The Windows build uses WinUI 3 with four working areas.</p>
           </header>
           <div class="prose">
-            <p>Folders lists each watched directory and the number of rules it uses. Rules shows the selected folder's list in priority order, with a sort count beside each rule. Activity is a view of the journal. Settings holds timings, notifications, appearance and updates.</p>
+            <p>Plan shows the rule sheet for the current folder in priority order. Inputs lists the watched directories and the background watch. Log is the move journal. Settings holds timings, notifications, appearance and updates.</p>
           </div>
           <div class="gallery">
-            <figure class="shot shot--7">
-              <div class="shot-media"><img src="images/app-folders.png" alt="The Folders page listing watched directories with a rule count next to each." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">01</span><span><b>Folders.</b> Each watched folder and the number of rules it uses.</span></figcaption>
-            </figure>
-            <figure class="shot shot--5">
-              <div class="shot-media"><img src="images/app-rules.png" alt="The Rules page showing a folder's rules in priority order." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">02</span><span><b>Rules.</b> The selected folder's rules in priority order.</span></figcaption>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/desk-plan.png" alt="The Plan view showing a folder's rules in priority order." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">01</span><span><b>Plan.</b> The rule sheet for the current folder.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-rules-custom.png" alt="The Rules page for a folder with its own rules and a sort count on each rule." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">03</span><span><b>Per-folder rules.</b> Sort counts show what each rule has moved.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-inputs.png" alt="The Inputs view listing watched folders." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">02</span><span><b>Inputs.</b> Watched folders and the background watch.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-advanced-rules.png" alt="The advanced editor showing a rule as JSON." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">04</span><span><b>Advanced editor.</b> The same rule as JSON.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-log.png" alt="The Log view listing moves from the journal." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">03</span><span><b>Log.</b> Moves from the journal, with search and undo.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">05</span><span><b>Activity.</b> The journal, newest first.</span></figcaption>
-            </figure>
-            <figure class="shot">
-              <div class="shot-media"><img src="images/app-settings.png" alt="The Settings page with timing, notification, appearance and update options." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">06</span><span><b>Settings.</b> Timings, notifications, appearance and updates.</span></figcaption>
-            </figure>
-            <figure class="shot">
-              <div class="shot-media"><img src="images/app-about.png" alt="The About dialog with the app name, version, license and project links." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">07</span><span><b>About.</b> Version, license and project links.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-wizard.png" alt="The rule wizard showing the files a rule would move." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">04</span><span><b>Wizard.</b> The files a rule would move, before saving.</span></figcaption>
             </figure>
           </div>
         </section>
@@ -500,80 +488,43 @@ gnu-sorter --attach-rules --root ~/Downloads" aria-label="Copy the per-folder ru
         <section id="wizard" class="docs-section" data-shots-section>
           <header class="sec-head">
             <h2>The rule wizard</h2>
-            <p class="sec-lede">The wizard opens from Rules, Add Rule. It writes the same rule object as the advanced editor and saves nothing until the last step.</p>
+            <p class="sec-lede">The wizard opens from Plan, Add Rule. It writes the same rule object as the advanced editor and saves nothing until the last step.</p>
           </header>
-          <ol class="seq">
+                    <ol class="seq">
             <li class="seq-item">
               <span class="seq-index">01</span>
               <div>
-                <h3 class="seq-title">Choose the folder</h3>
-                <p class="seq-text">Pick the folder to tidy. The wizard starts on the folder selected in Rules.</p>
+                <h3 class="seq-title">Catch</h3>
+                <p class="seq-text">Start from a file type or set <code>extensions</code> and a name pattern. Patterns use <code>re.search</code>. The page can also suggest rules from files already in the folder.</p>
               </div>
             </li>
             <li class="seq-item">
               <span class="seq-index">02</span>
               <div>
-                <h3 class="seq-title">Pick what to catch</h3>
-                <p class="seq-text">Choose extensions, a name pattern, or both. Patterns are regular expressions and are tested with <code>re.search</code>.</p>
+                <h3 class="seq-title">Destination</h3>
+                <p class="seq-text">Keep the suggested relative name or type another. <code>Photos/Screenshots</code> is valid; an absolute path or <code>..</code> is rejected.</p>
               </div>
             </li>
             <li class="seq-item">
               <span class="seq-index">03</span>
               <div>
-                <h3 class="seq-title">Take the destination</h3>
-                <p class="seq-text">Keep the suggested relative name or type another. <code>Photos/Screenshots</code> is valid; an absolute path or <code>..</code> is rejected.</p>
+                <h3 class="seq-title">Conditions</h3>
+                <p class="seq-text">Set <code>min_size_mb</code>, <code>max_size_mb</code>, <code>modified_within_days</code> and an exclusion pattern. Choose any or all for the match mode, and leave the rule enabled or paused.</p>
               </div>
             </li>
             <li class="seq-item">
               <span class="seq-index">04</span>
               <div>
-                <h3 class="seq-title">Add limits</h3>
-                <p class="seq-text">Set <code>min_size_mb</code>, <code>max_size_mb</code> or <code>modified_within_days</code>, then choose any or all for the match mode.</p>
-              </div>
-            </li>
-            <li class="seq-item">
-              <span class="seq-index">05</span>
-              <div>
-                <h3 class="seq-title">Set priority and scope</h3>
-                <p class="seq-text">Choose the rule's position in the folder's list and confirm the folder. Position is priority: the first match wins.</p>
-              </div>
-            </li>
-            <li class="seq-item">
-              <span class="seq-index">06</span>
-              <div>
-                <h3 class="seq-title">Review the result</h3>
-                <p class="seq-text">The last step lists real files the rule would move, using their size and modification time. Save writes the rule; Cancel discards it.</p>
+                <h3 class="seq-title">Proof</h3>
+                <p class="seq-text">Read the rule back, check its position in the list, and see the real files it would move. Save writes the rule; Cancel discards it.</p>
               </div>
             </li>
           </ol>
+
           <div class="gallery">
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-1.png" alt="Rule wizard step 1, choosing the folder to tidy." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">08</span><span><b>Step 1.</b> Choose the folder to tidy.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-2.png" alt="Rule wizard step 2, choosing extensions and name patterns to catch." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">09</span><span><b>Step 2.</b> Pick extensions, a name pattern, or both.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-2-name.png" alt="Rule wizard step 2 with a name pattern enabled." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">10</span><span><b>Step 2, by name.</b> A name pattern can match part of the file name.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-3.png" alt="Rule wizard step 3, showing a suggested destination folder." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">11</span><span><b>Step 3.</b> A suggested destination.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-4.png" alt="Rule wizard step 4, setting size and age limits and the match mode." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">12</span><span><b>Step 4.</b> Size, age and match mode.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-5.png" alt="Rule wizard step 5, setting rule priority and scope." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">13</span><span><b>Step 5.</b> Priority and scope.</span></figcaption>
-            </figure>
-            <figure class="shot shot--12">
-              <div class="shot-media"><img src="images/app-wizard-6.png" alt="Rule wizard step 6, reviewing the files the rule would move." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">14</span><span><b>Step 6.</b> A preview of the real files the rule would move.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-wizard.png" alt="The rule wizard showing the files a rule would move." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">01</span><span><b>Proof.</b> The files this rule would move, before saving.</span></figcaption>
             </figure>
           </div>
           <p class="fineprint">The advanced editor exposes the same fields as JSON. <a href="#rules">Rule fields</a>.</p>
@@ -773,16 +724,8 @@ gnu-sorter --import-journal ~/history-export.log" aria-label="Copy the journal b
 
           <div class="gallery">
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">15</span><span><b>Activity.</b> Every move with the rule that caught it.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-activity-search.png" alt="Searching the Activity page by file name and rule." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">16</span><span><b>Search.</b> Filter by name, rule, folder or date range.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-activity-restore.png" alt="A restore preview listing files, sizes and name clashes." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">17</span><span><b>Restore preview.</b> Files, sizes and clashes before committing.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-log.png" alt="The Log view listing moves from the journal." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">01</span><span><b>Log.</b> Moves from the journal, with search and undo.</span></figcaption>
             </figure>
           </div>
         </section>
@@ -901,9 +844,9 @@ gnu-sorter --import-journal ~/history-export.log" aria-label="Copy the journal b
           </span>
           <span class="brand-text">Funnel</span>
         </a>
-        <p>A file sorter for Linux and Windows. Rules are per folder, moves are journaled, and undo is one command.</p>
+        <p>A file sorter for Linux and Windows. It moves files by the rules you set for each folder and records every move.</p>
         <p class="footer-meta">
-          <span>Version 3.0 in development</span>
+          <span>Version 3.1 in development</span>
           <span>GPL-3.0</span>
         </p>
       </div>
@@ -934,7 +877,6 @@ gnu-sorter --import-journal ~/history-export.log" aria-label="Copy the journal b
 
     <div class="wrap footer-bottom">
       <p>&copy; <span id="year">2026</span> notmicrosoft2000-cmd &middot; Funnel &middot; GPL-3.0</p>
-      <p class="footer-tag">Per-folder rules. Journaled moves.</p>
     </div>
   </footer>
 

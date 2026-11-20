@@ -74,7 +74,7 @@
         <div class="rail-body">
           <h1>Install Funnel on Linux or Windows.</h1>
           <p class="sec-lede">The Flatpak build is the primary Linux package. A user-local script installs under your home directory. The Windows build is a separate WinUI 3 application.</p>
-          <p class="fineprint">Version 3.0 is in development. Requirements and commands below match the current repository.</p>
+          <p class="fineprint">Version 3.1 is in development. Requirements and commands below match the current repository.</p>
         </div>
       </div>
     </section>
@@ -117,12 +117,12 @@
 
           <div class="note">
             <span class="note-label">First launch</span>
-            <p>The window opens on the Folders page. Add a folder, then write a rule for it. The Flatpak ships its own GNOME runtime, so the Python and GTK4 libraries come with the package.</p>
+            <p>The window opens on the Plan view. Add a folder under Inputs, then write a rule for it. The Flatpak ships its own GNOME runtime, so the Python and GTK4 libraries come with the package.</p>
           </div>
 
           <div class="note">
             <span class="note-label">Sandbox</span>
-            <p>The Flatpak build has no tray icon and no login autostart. The sandbox does not allow either. Start Funnel from the launcher, or run a sweep with <code>flatpak run io.neptunepc.Funnel --sweep</code>.</p>
+            <p>The Flatpak build leaves out the optional tray helper and has no built-in autostart. Start Funnel from the launcher, or run a sweep with <code>flatpak run io.neptunepc.Funnel --sweep</code>.</p>
           </div>
 
           <p class="fineprint">The <a href="#manual">user-local install</a> path does not use Flatpak and installs under your home directory.</p>
@@ -179,7 +179,7 @@
         <div class="rail-body">
           <header class="sec-head">
             <h2 class="sec-title">Windows, WinUI 3 build.</h2>
-            <p class="sec-lede">The Windows build is a separate repository with a WinUI 3 interface. It has the same four areas, Folders, Rules, Activity and Settings, and the same GPL-3.0 license. The releases page lists the current executable; the repository carries the source.</p>
+            <p class="sec-lede">The Windows build is a separate repository with a WinUI 3 interface. It has four areas, Folders, Rules, Activity and Settings, and the same GPL-3.0 license. The releases page lists the current executable; the repository carries the source.</p>
           </header>
 
           <div class="paths">
@@ -327,30 +327,26 @@ gnu-sorter --update</code></pre>
         </div>
         <div class="rail-body">
           <header class="sec-head">
-            <h2 class="sec-title">Five screens from the Linux build.</h2>
-            <p class="sec-lede">The GTK4 interface. The Windows build has the same areas with WinUI 3 controls, so the workflow matches even when the controls differ.</p>
+            <h2 class="sec-title">Four screens from the Linux build.</h2>
+            <p class="sec-lede">The current GTK4 desk: Plan, Inputs and Log, plus the rule wizard. The Windows build uses WinUI 3 with its own four-area layout.</p>
           </header>
 
           <div class="gallery">
-            <figure class="shot shot--7">
-              <div class="shot-media"><img src="images/app-folders.png" alt="The Folders page in Funnel, listing watched directories with a rule count next to each." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">01</span><span><b>Folders.</b> Directories to watch, with the number of rules on each one.</span></figcaption>
-            </figure>
-            <figure class="shot shot--5">
-              <div class="shot-media"><img src="images/app-rules.png" alt="The Rules page showing a folder's rules with extensions and destinations." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">02</span><span><b>Rules.</b> The rule list for one folder, in priority order.</span></figcaption>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/desk-plan.png" alt="The Plan view showing a folder's rules in priority order." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">01</span><span><b>Plan.</b> The rule sheet for the current folder.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-advanced-rules.png" alt="The advanced editor showing a rule as JSON." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">03</span><span><b>Advanced editor.</b> The same rule as JSON, with the fields exposed.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-inputs.png" alt="The Inputs view listing watched folders." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">02</span><span><b>Inputs.</b> Watched folders and the background watch.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">04</span><span><b>Activity.</b> The journal as a searchable list of moves.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-log.png" alt="The Log view listing moves from the journal." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">03</span><span><b>Log.</b> Moves from the journal, with search and undo.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-settings.png" alt="The Settings page with preset, watch and startup options." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">05</span><span><b>Settings.</b> Presets, watch behavior and startup options.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-wizard.png" alt="The rule wizard showing the files a rule would move." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">04</span><span><b>Wizard.</b> The files a rule would move, before saving.</span></figcaption>
             </figure>
           </div>
         </div>
@@ -388,9 +384,9 @@ gnu-sorter --update</code></pre>
           </span>
           <span class="brand-text">Funnel</span>
         </a>
-        <p>A file sorter for Linux and Windows. Rules are per folder, moves are journaled, and undo is one command.</p>
+        <p>A file sorter for Linux and Windows. It moves files by the rules you set for each folder and records every move.</p>
         <p class="footer-meta">
-          <span>Version 3.0 in development</span>
+          <span>Version 3.1 in development</span>
           <span>GPL-3.0</span>
         </p>
       </div>
@@ -421,7 +417,6 @@ gnu-sorter --update</code></pre>
 
     <div class="wrap footer-bottom">
       <p>&copy; <span id="year">2026</span> notmicrosoft2000-cmd &middot; Funnel &middot; GPL-3.0</p>
-      <p class="footer-tag">Per-folder rules. Journaled moves.</p>
     </div>
   </footer>
 

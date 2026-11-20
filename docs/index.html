@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#12110f">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Funnel: per-folder file sorting for Linux and Windows">
-  <meta property="og:description" content="Rules per folder, a journal for every move, and a six-step rule wizard. Flatpak and user-local install on Linux, a native WinUI 3 build on Windows.">
+  <meta property="og:description" content="Funnel sorts files by rules set for each folder, records every move, and shows the files a rule would move before saving. Install on Linux with Flatpak or a user-local script. The Windows build is separate.">
   <meta property="og:image" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/icon.png">
   <meta property="og:url" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/">
   <link rel="icon" href="favicon.ico">
@@ -94,7 +94,7 @@
           <dl class="rail-meta">
             <div>
               <dt>Version</dt>
-              <dd>3.0 in development</dd>
+              <dd>3.1 in development</dd>
             </div>
             <div>
               <dt>License</dt>
@@ -132,7 +132,7 @@ flatpak run io.neptunepc.Funnel" aria-label="Copy the Flatpak install commands">
 <span class="prompt" aria-hidden="true">$</span> flatpak install funnel io.neptunepc.Funnel
 <span class="prompt" aria-hidden="true">$</span> flatpak run io.neptunepc.Funnel</code></pre>
             </div>
-            <p class="fineprint">The Flatpak build has no tray icon and no login autostart; the sandbox does not allow either. <a href="download.html">Other install paths</a>.</p>
+            <p class="fineprint">The Flatpak build leaves out the optional tray helper and has no built-in autostart. <a href="download.html">Other install paths</a>.</p>
           </div>
         </div>
       </div>
@@ -147,50 +147,20 @@ flatpak run io.neptunepc.Funnel" aria-label="Copy the Flatpak install commands">
 
         <div class="rail-body">
           <header class="sec-head">
-            <h2 class="sec-title">Six files arrive. Four destinations catch them.</h2>
-            <p class="sec-lede">The demo runs the same extension matching the app runs. In the app, each move is written to the journal as it happens.</p>
+            <h2 class="sec-title">A sweep reads each folder once.</h2>
+            <p class="sec-lede">A sweep checks the files already in a watched folder and moves each one to the folder named by its first matching rule. A dry run prints the plan without moving anything.</p>
           </header>
 
-          <div class="demo" data-demo aria-hidden="true">
-            <div class="demo-grid">
-              <div class="demo-source">
-                <div class="demo-bar">
-                  <span>~/Downloads</span>
-                  <span class="demo-state">watching</span>
-                </div>
-                <div class="demo-files">
-                  <span class="demo-file" data-target="documents" data-ext="pdf">report_final_v2.pdf</span>
-                  <span class="demo-file" data-target="images" data-ext="jpg">IMG_0421.jpg</span>
-                  <span class="demo-file" data-target="archives" data-ext="zip">archive.zip</span>
-                  <span class="demo-file" data-target="documents" data-ext="md">notes.md</span>
-                  <span class="demo-file" data-target="other" data-ext="exe">setup.exe</span>
-                  <span class="demo-file" data-target="images" data-ext="png">screenshot.png</span>
-                </div>
-              </div>
-
-              <div class="demo-dest">
-                <div class="demo-folder" data-folder="documents">
-                  <span class="demo-folder-name">~/Documents</span>
-                  <span class="demo-folder-stack"></span>
-                </div>
-                <div class="demo-folder" data-folder="images">
-                  <span class="demo-folder-name">~/Pictures</span>
-                  <span class="demo-folder-stack"></span>
-                </div>
-                <div class="demo-folder" data-folder="archives">
-                  <span class="demo-folder-name">~/Archives</span>
-                  <span class="demo-folder-stack"></span>
-                </div>
-                <div class="demo-folder" data-folder="other">
-                  <span class="demo-folder-name">~/Needs-review</span>
-                  <span class="demo-folder-stack"></span>
-                </div>
-              </div>
+          <div class="code">
+            <div class="code-head">
+              <span class="code-label">Sweep</span>
+              <button class="copy-btn" type="button" data-copy="gnu-sorter --sweep --dry-run
+gnu-sorter --sweep" aria-label="Copy the sweep commands">Copy</button>
             </div>
+            <pre><code><span class="prompt" aria-hidden="true">$</span> gnu-sorter --sweep --dry-run
+<span class="prompt" aria-hidden="true">$</span> gnu-sorter --sweep</code></pre>
           </div>
-
-          <p class="fineprint demo-note">The demo repeats. In the app the same match happens once per file, and the journal keeps the record.</p>
-          <noscript><p class="fineprint">The demo animation needs JavaScript. The screenshots and commands do not.</p></noscript>
+          <p class="fineprint">The dry run lists the planned moves. The sweep moves the files and appends one journal line per move. <code>--watch</code> repeats the same pass as new files arrive.</p>
         </div>
       </div>
     </section>
@@ -256,7 +226,7 @@ flatpak run io.neptunepc.Funnel" aria-label="Copy the Flatpak install commands">
 
         <div class="rail-body">
           <header class="sec-head">
-            <h2 class="sec-title">Every move is journaled. Undo is a command.</h2>
+            <h2 class="sec-title">Each move is written to the journal.</h2>
             <p class="sec-lede">Funnel waits for a file to stop changing before it moves it. If the destination already has that name, the default is to rename, not replace.</p>
           </header>
 
@@ -308,7 +278,7 @@ gnu-sorter --undo-last 1" aria-label="Copy the restore and undo commands">Copy</
 
         <div class="rail-body">
           <header class="sec-head">
-            <h2 class="sec-title">Six steps, then a preview of your real files.</h2>
+            <h2 class="sec-title">Four steps, then the files the rule would move.</h2>
             <p class="sec-lede">The wizard writes the same rule the advanced editor writes. The last step lists the files it would move before you save anything.</p>
           </header>
 
@@ -316,43 +286,29 @@ gnu-sorter --undo-last 1" aria-label="Copy the restore and undo commands">Copy</
             <li class="seq-item">
               <span class="seq-index">01</span>
               <div>
-                <h3 class="seq-title">Choose the folder to tidy</h3>
-                <p class="seq-text">Pick a folder you own, for example <code>~/Downloads</code>.</p>
+                <h3 class="seq-title">Catch</h3>
+                <p class="seq-text">Start from a file type or set the extensions and name pattern yourself. Patterns are regular expressions.</p>
               </div>
             </li>
             <li class="seq-item">
               <span class="seq-index">02</span>
               <div>
-                <h3 class="seq-title">Pick what to catch</h3>
-                <p class="seq-text">Choose extensions, a name pattern, or both. Patterns accept regular expressions.</p>
+                <h3 class="seq-title">Destination</h3>
+                <p class="seq-text">Keep the suggested folder name or type another. The name is relative to the folder you are sorting.</p>
               </div>
             </li>
             <li class="seq-item">
               <span class="seq-index">03</span>
               <div>
-                <h3 class="seq-title">Take the destination</h3>
-                <p class="seq-text">The wizard suggests a folder. Keep it or choose another one.</p>
+                <h3 class="seq-title">Conditions</h3>
+                <p class="seq-text">Set size and age limits, an exclusion pattern, and whether every condition has to match.</p>
               </div>
             </li>
             <li class="seq-item">
               <span class="seq-index">04</span>
               <div>
-                <h3 class="seq-title">Add limits</h3>
-                <p class="seq-text">Set a minimum size or age, and choose the match mode.</p>
-              </div>
-            </li>
-            <li class="seq-item">
-              <span class="seq-index">05</span>
-              <div>
-                <h3 class="seq-title">Set priority and scope</h3>
-                <p class="seq-text">Decide where the rule sits in the list and which folder it applies to.</p>
-              </div>
-            </li>
-            <li class="seq-item">
-              <span class="seq-index">06</span>
-              <div>
-                <h3 class="seq-title">Review the result</h3>
-                <p class="seq-text">Check the files it would move, then save the rule.</p>
+                <h3 class="seq-title">Proof</h3>
+                <p class="seq-text">See the files this rule would move and the ones it would leave, then save or discard it.</p>
               </div>
             </li>
           </ol>
@@ -371,62 +327,26 @@ gnu-sorter --undo-last 1" aria-label="Copy the restore and undo commands">Copy</
 
         <div class="rail-body">
           <header class="sec-head">
-            <h2 class="sec-title">The Linux build, screen by screen.</h2>
-            <p class="sec-lede">Screens from the GTK4 app. The Windows build has the same four areas with WinUI 3 controls.</p>
+            <h2 class="sec-title">Three views in the Linux build.</h2>
+            <p class="sec-lede">Screens from the current GTK4 app. The desk has three views: Plan, Inputs and Log. The Windows build uses WinUI 3 with four areas.</p>
           </header>
 
           <div class="gallery">
-            <figure class="shot shot--7">
-              <div class="shot-media"><img src="images/app-folders.png" alt="The Folders page in Funnel, listing watched directories with a rule count next to each." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">01</span><span><b>Folders.</b> Directories to watch, with the number of rules on each.</span></figcaption>
-            </figure>
-            <figure class="shot shot--5">
-              <div class="shot-media"><img src="images/app-rules.png" alt="The Rules page showing a folder's rules with extensions and destinations." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">02</span><span><b>Rules.</b> A folder's rules in priority order.</span></figcaption>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/desk-plan.png" alt="The Plan view showing a folder's rules in priority order." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">01</span><span><b>Plan.</b> The rule sheet for the current folder.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-rules-custom.png" alt="The Rules page for a folder that keeps its own rules, with sort counts per rule." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">03</span><span><b>Per-folder rules.</b> Sort counts show which rules are doing the work.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-inputs.png" alt="The Inputs view listing watched folders." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">02</span><span><b>Inputs.</b> Watched folders and the background watch.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-advanced-rules.png" alt="The JSON editor showing a rule's raw configuration." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">04</span><span><b>Advanced editor.</b> The same rule as JSON.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-log.png" alt="The Log view listing moves from the journal." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">03</span><span><b>Log.</b> Moves from the journal, with search and undo.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">05</span><span><b>Activity.</b> Every move, searchable.</span></figcaption>
-            </figure>
-            <figure class="shot shot--5">
-              <div class="shot-media"><img src="images/app-settings.png" alt="The Settings page with preset, watch and startup options." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">06</span><span><b>Settings.</b> Presets, watching and startup.</span></figcaption>
-            </figure>
-            <figure class="shot shot--7">
-              <div class="shot-media"><img src="images/app-about.png" alt="The About dialog with the Funnel name, version and project links." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">07</span><span><b>About.</b> Version and project links.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-1.png" alt="Rule wizard step 1, choosing the folder to tidy." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">08</span><span><b>Wizard 1.</b> Choose the folder to tidy.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-2.png" alt="Rule wizard step 2, choosing extensions and name patterns to catch." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">09</span><span><b>Wizard 2.</b> Pick extensions, a name pattern, or both.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-3.png" alt="Rule wizard step 3, showing a suggested destination folder." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">10</span><span><b>Wizard 3.</b> A suggested destination.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-4.png" alt="Rule wizard step 4, setting size and age limits and the match mode." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">11</span><span><b>Wizard 4.</b> Size, age and match mode.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-5.png" alt="Rule wizard step 5, setting rule priority and scope." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">12</span><span><b>Wizard 5.</b> Priority and scope.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-6.png" alt="Rule wizard step 6, reviewing the files the rule would move." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">13</span><span><b>Wizard 6.</b> A preview of the files it would move.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-wizard.png" alt="The rule wizard showing the files a rule would move." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">04</span><span><b>Wizard.</b> The files a rule would move, before saving.</span></figcaption>
             </figure>
           </div>
         </div>
@@ -443,14 +363,14 @@ gnu-sorter --undo-last 1" aria-label="Copy the restore and undo commands">Copy</
         <div class="rail-body">
           <header class="sec-head">
             <h2 class="sec-title">Linux with Flatpak. Windows with WinUI 3.</h2>
-            <p class="sec-lede">The two builds share the rule format and the four areas. Installation differs.</p>
+            <p class="sec-lede">The two builds share the rule format. The interfaces and install steps differ.</p>
           </header>
 
           <div class="paths">
             <div class="path">
               <span class="path-name">Linux, Flatpak</span>
               <div class="path-body">
-                <p>Primary package. The commands at the top of this page add the project repository, install Funnel and start it. Updates arrive with <code>flatpak update</code>. The sandbox has no tray icon and no login autostart.</p>
+                <p>Primary package. The commands at the top of this page add the project repository, install Funnel and start it. Updates arrive with <code>flatpak update</code>. It has no tray icon and no built-in autostart because the optional tray helper is not bundled.</p>
               </div>
               <a class="path-link" href="docs.html#install">Install notes</a>
             </div>
@@ -464,7 +384,7 @@ gnu-sorter --undo-last 1" aria-label="Copy the restore and undo commands">Copy</
             <div class="path">
               <span class="path-name">Windows, WinUI 3</span>
               <div class="path-body">
-                <p>A separate native build with the same four areas: Folders, Rules, Activity, Settings. Same GPL-3.0 license.</p>
+                <p>A separate native build with four areas: Folders, Rules, Activity and Settings. Same rule format and GPL-3.0 license.</p>
               </div>
               <a class="path-link" href="https://github.com/notmicrosoft2000-cmd/gnu-sorter-windows" target="_blank" rel="noopener">Windows build</a>
             </div>
@@ -526,9 +446,9 @@ gnu-sorter --undo-last 1" aria-label="Copy the sweep and undo commands">Copy</bu
           </span>
           <span class="brand-text">Funnel</span>
         </a>
-        <p>A file sorter for Linux and Windows. Rules are per folder, moves are journaled, and undo is one command.</p>
+        <p>A file sorter for Linux and Windows. It moves files by the rules you set for each folder and records every move.</p>
         <p class="footer-meta">
-          <span>Version 3.0 in development</span>
+          <span>Version 3.1 in development</span>
           <span>GPL-3.0</span>
         </p>
       </div>
@@ -559,7 +479,6 @@ gnu-sorter --undo-last 1" aria-label="Copy the sweep and undo commands">Copy</bu
 
     <div class="wrap footer-bottom">
       <p>&copy; <span id="year">2026</span> notmicrosoft2000-cmd &middot; Funnel &middot; GPL-3.0</p>
-      <p class="footer-tag">Per-folder rules. Journaled moves.</p>
     </div>
   </footer>
 

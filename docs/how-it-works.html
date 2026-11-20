@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#12110f">
   <meta property="og:type" content="website">
   <meta property="og:title" content="How Funnel works: folders, rules and the journal">
-  <meta property="og:description" content="A folder, a rule list, a sweep or a watcher, and one journal line per move. The mechanics of Funnel in five steps.">
+  <meta property="og:description" content="A folder, a rule list, a sweep or a watcher, and one journal line per move. The mechanics of Funnel, from a folder to a journal line.">
   <meta property="og:image" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/icon.png">
   <meta property="og:url" content="https://notmicrosoft2000-cmd.github.io/gnu-sorter/how-it-works.html">
   <link rel="icon" href="favicon.ico">
@@ -74,7 +74,7 @@
         <div class="rail-body">
           <h1>How Funnel sorts a folder.</h1>
           <p class="sec-lede">Funnel reads a folder by the rules attached to it. A sweep or a watcher moves matching files, and each move is written to a journal. Undo reads that journal and puts a file back.</p>
-          <p class="fineprint">This page describes the GTK4 build. The Windows build has the same four areas: Folders, Rules, Activity, Settings.</p>
+          <p class="fineprint">This page describes the GTK4 build. Its desk has three views: Plan, Inputs and Log. The Windows build uses WinUI 3 with four areas.</p>
         </div>
       </div>
     </section>
@@ -92,7 +92,7 @@
           </header>
 
           <div class="prose">
-            <p>Open Folders and add a path. <code>~/Downloads</code> is a common first choice. The folder must be readable and writable by your user account. A permission error on one file appears in the terminal and does not stop the rest of the sweep.</p>
+            <p>Open Inputs and add a path. <code>~/Downloads</code> is a common first choice. The folder must be readable and writable by your user account. A permission error on one file appears in the terminal and does not stop the rest of the sweep.</p>
             <p>A folder on the shared template inherits the default rule list. A folder with its own rules keeps a separate list. To put a folder back on the template, run <code>gnu-sorter --attach-rules --root ~/Downloads</code>.</p>
           </div>
 
@@ -121,7 +121,7 @@
               <span class="seq-index">01</span>
               <div>
                 <h3 class="seq-title">Use the wizard</h3>
-                <p class="seq-text">Open Rules and choose the folder. Pick extensions, a name pattern, or both. Take the suggested destination or choose another one. Set size or age limits, then priority and scope. The last step lists the files the rule would move. Save writes the rule.</p>
+                <p class="seq-text">Open Plan and choose the folder. Pick extensions, a name pattern, or both. Take the suggested destination or choose another one. Set size and age limits and the match mode. The last step lists the files the rule would move. Save writes the rule.</p>
               </div>
             </li>
             <li class="seq-item">
@@ -262,7 +262,7 @@ gnu-sorter --undo-last 1</code></pre>
             </div>
             <div class="spec-row">
               <dt>Flatpak sandbox</dt>
-              <dd>No tray icon and no login autostart. The sandbox does not allow either. Start Funnel yourself, or run a sweep from a terminal.</dd>
+              <dd>No tray icon and no built-in autostart. The optional tray helper is not bundled. Start Funnel yourself, or run a sweep from a terminal.</dd>
             </div>
             <div class="spec-row">
               <dt>Wrong move</dt>
@@ -287,41 +287,25 @@ gnu-sorter --undo-last 1</code></pre>
         <div class="rail-body">
           <header class="sec-head">
             <h2 class="sec-title">The same steps in the interface.</h2>
-            <p class="sec-lede">Screens from the GTK4 build. Each plate shows one part of the sequence: a folder, a rule, the wizard, the activity list.</p>
+            <p class="sec-lede">Screens from the current GTK4 build: the rule sheet, watched folders, the journal and the wizard.</p>
           </header>
 
           <div class="gallery">
-            <figure class="shot shot--7">
-              <div class="shot-media"><img src="images/app-folders.png" alt="The Folders page in Funnel, listing watched directories with a rule count next to each." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">01</span><span><b>Folders.</b> Watched directories with the number of rules on each one.</span></figcaption>
-            </figure>
-            <figure class="shot shot--5">
-              <div class="shot-media"><img src="images/app-activity.png" alt="The Activity page listing sorted files with their rule and destination." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">02</span><span><b>Activity.</b> The journal as a searchable list of moves.</span></figcaption>
+            <figure class="shot shot--4">
+              <div class="shot-media"><img src="images/desk-plan.png" alt="The Plan view showing a folder's rules in priority order." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">01</span><span><b>Plan.</b> The rule sheet for the current folder.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-1.png" alt="Rule wizard step 1, choosing the folder to tidy." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">03</span><span><b>Wizard 1.</b> Choose the folder that the rule belongs to.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-inputs.png" alt="The Inputs view listing watched folders." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">02</span><span><b>Inputs.</b> Watched folders and the background watch.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-2.png" alt="Rule wizard step 2, choosing extensions and name patterns to catch." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">04</span><span><b>Wizard 2.</b> Pick extensions, a name pattern, or both.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-log.png" alt="The Log view listing moves from the journal." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">03</span><span><b>Log.</b> Moves from the journal, with search and undo.</span></figcaption>
             </figure>
             <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-3.png" alt="Rule wizard step 3, showing a suggested destination folder." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">05</span><span><b>Wizard 3.</b> Accept the suggested destination or choose another one.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-4.png" alt="Rule wizard step 4, setting size and age limits and the match mode." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">06</span><span><b>Wizard 4.</b> Size and age limits, plus the match mode.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-5.png" alt="Rule wizard step 5, setting rule priority and scope." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">07</span><span><b>Wizard 5.</b> Priority and scope for the new rule.</span></figcaption>
-            </figure>
-            <figure class="shot shot--4">
-              <div class="shot-media"><img src="images/app-wizard-6.png" alt="Rule wizard step 6, reviewing the files the rule would move." loading="lazy" data-shot></div>
-              <figcaption><span class="shot-no">08</span><span><b>Wizard 6.</b> The preview lists the files before the rule is saved.</span></figcaption>
+              <div class="shot-media"><img src="images/desk-wizard.png" alt="The rule wizard showing the files a rule would move." loading="lazy" data-shot></div>
+              <figcaption><span class="shot-no">04</span><span><b>Wizard.</b> The files a rule would move, before saving.</span></figcaption>
             </figure>
           </div>
         </div>
@@ -352,7 +336,7 @@ flatpak install funnel io.neptunepc.Funnel
 flatpak run io.neptunepc.Funnel</code></pre>
           </div>
 
-          <p class="fineprint">After the first launch, add a folder on the Folders page. The <a href="docs.html">documentation</a> covers the command line, rule fields and troubleshooting. The source is on <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">GitHub</a>.</p>
+          <p class="fineprint">After the first launch, add a folder on the Inputs view. The <a href="docs.html">documentation</a> covers the command line, rule fields and troubleshooting. The source is on <a href="https://github.com/notmicrosoft2000-cmd/gnu-sorter" target="_blank" rel="noopener">GitHub</a>.</p>
         </div>
       </div>
     </section>
@@ -371,9 +355,9 @@ flatpak run io.neptunepc.Funnel</code></pre>
           </span>
           <span class="brand-text">Funnel</span>
         </a>
-        <p>A file sorter for Linux and Windows. Rules are per folder, moves are journaled, and undo is one command.</p>
+        <p>A file sorter for Linux and Windows. It moves files by the rules you set for each folder and records every move.</p>
         <p class="footer-meta">
-          <span>Version 3.0 in development</span>
+          <span>Version 3.1 in development</span>
           <span>GPL-3.0</span>
         </p>
       </div>
@@ -404,7 +388,6 @@ flatpak run io.neptunepc.Funnel</code></pre>
 
     <div class="wrap footer-bottom">
       <p>&copy; <span id="year">2026</span> notmicrosoft2000-cmd &middot; Funnel &middot; GPL-3.0</p>
-      <p class="footer-tag">Per-folder rules. Journaled moves.</p>
     </div>
   </footer>
 
