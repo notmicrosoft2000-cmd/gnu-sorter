@@ -46,8 +46,6 @@
 
   --wrap: 1360px;
   --gutter: clamp(20px, 4vw, 56px);
-  --rail: clamp(150px, 15vw, 210px);
-  --rail-gap: clamp(24px, 3vw, 44px);
   --sec-y: clamp(52px, 7vw, 100px);
 
   --fs-display: clamp(3.4rem, 8vw, 6.5rem);
@@ -345,7 +343,7 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
 
 .link--ext::after { content: "\2197"; }
 
-/* ---------- Layout: label rail ---------- */
+/* ---------- Layout: single-column editorial flow ---------- */
 .band {
   border-top: 1px solid var(--line);
   padding-block: var(--sec-y);
@@ -360,20 +358,18 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
   margin-bottom: clamp(18px, 2.2vw, 28px);
 }
 
+/* One column per band. The old index rail is now a short mono eyebrow above
+   the section title; everything below it uses the full measure. */
 .rail-grid {
-  display: grid;
-  grid-template-columns: var(--rail) minmax(0, 1fr);
-  column-gap: var(--rail-gap);
-  align-items: start;
+  display: block;
 }
 
 .rail {
-  position: sticky;
-  top: 88px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: 4px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin-bottom: clamp(12px, 1.6vw, 18px);
   font-family: var(--font-mono);
 }
 
@@ -391,9 +387,17 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
 }
 
 .rail-meta {
-  margin: 20px 0 0;
-  display: grid;
-  gap: 12px;
+  flex-basis: 100%;
+  margin: 8px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+}
+
+.rail-meta div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
 }
 
 .rail-meta dt {
@@ -404,7 +408,7 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
 }
 
 .rail-meta dd {
-  margin: 2px 0 0;
+  margin: 0;
   font-size: 0.75rem;
   line-height: 1.5;
   color: var(--ink-2);
@@ -412,8 +416,11 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
 
 .rail-body {
   min-width: 0;
-  border-left: 1px solid var(--line);
-  padding-left: var(--rail-gap);
+}
+
+.hero .rail,
+.page-hero .rail {
+  margin-bottom: clamp(20px, 2.6vw, 30px);
 }
 
 /* ---------- Section headings and prose ---------- */
@@ -1144,46 +1151,6 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
   .header-actions .btn { display: none; }
 }
 
-@media (max-width: 960px) {
-  .rail-grid {
-    grid-template-columns: 1fr;
-    row-gap: 20px;
-  }
-
-  .rail {
-    position: static;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 10px;
-    padding-top: 0;
-  }
-
-  .rail-meta {
-    margin: 0 0 0 auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 20px;
-  }
-
-  .rail-meta div {
-    display: flex;
-    align-items: baseline;
-    gap: 5px;
-  }
-
-  .rail-meta dd { margin: 0; }
-
-  .rail-body {
-    border-left: 0;
-    padding-left: 0;
-  }
-}
-
-@media (max-width: 700px) {
-  .rail-meta { display: none; }
-}
-
 /* ---------- Subpage hero ---------- */
 .page-hero {
   padding-block: clamp(36px, 5vw, 72px) clamp(32px, 4vw, 56px);
@@ -1213,21 +1180,21 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
 
 /* ---------- Documentation layout ---------- */
 .docs-layout {
-  display: grid;
-  grid-template-columns: 208px minmax(0, 1fr);
-  gap: clamp(28px, 4vw, 56px);
-  align-items: start;
-  padding-block: 40px 88px;
+  display: block;
+  padding-block: 34px 88px;
 }
 
+/* The contents list is a horizontal strip above the article, not a side rail.
+   Keeping the .docs-sidebar hooks preserves the scrollspy in script.js. */
 .docs-sidebar {
-  position: sticky;
-  top: 88px;
+  margin-bottom: clamp(24px, 3vw, 34px);
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
   font-family: var(--font-mono);
 }
 
 .docs-sidebar-title {
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   font-size: 0.625rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1236,14 +1203,13 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
 
 .docs-sidebar nav {
   display: flex;
-  flex-direction: column;
-  border-left: 1px solid var(--line);
+  flex-wrap: wrap;
+  gap: 2px 0;
 }
 
 .docs-sidebar a {
-  margin-left: -1px;
-  padding: 6px 0 6px 12px;
-  border-left: 1px solid transparent;
+  padding: 5px 14px 5px 0;
+  border-bottom: 1px solid transparent;
   font-size: 0.75rem;
   color: var(--ink-2);
   transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
@@ -1252,10 +1218,10 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
 .docs-sidebar a:hover { color: var(--ink); }
 .docs-sidebar a.active {
   color: var(--ink);
-  border-left-color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
-.docs-content { max-width: 74ch; min-width: 0; }
+.docs-content { max-width: none; min-width: 0; }
 
 /* Documentation title block. The manual opens with its title and scope, not a
    banner: no oversized type, no action row. */
@@ -1328,24 +1294,6 @@ html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
 .defs dd {
   margin: 4px 0 0;
   color: var(--ink-2);
-}
-
-@media (max-width: 900px) {
-  .docs-layout { grid-template-columns: 1fr; }
-  .docs-sidebar { position: static; }
-  .docs-sidebar nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    border-left: 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .docs-sidebar a {
-    margin-left: 0;
-    border-left: 0;
-    border-bottom: 1px solid transparent;
-    padding: 8px 12px 8px 0;
-  }
-  .docs-sidebar a.active { border-left: 0; border-bottom-color: var(--accent); }
 }
 
 /* ---------- Tables ---------- */
