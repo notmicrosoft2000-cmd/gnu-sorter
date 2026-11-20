@@ -10,6 +10,15 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
 ## [Unreleased]
 
 ### Added
+- **Context rail and three sections**: `01 Plan`, `02 Inputs` and `03 Log`. The
+  rule sheet for the selected folder is the landing view. `00 Shared defaults`
+  is a context of its own, so a folder either uses it or has an own copy.
+- **Static proof panel**: the wizard's animated preview is gone. Counts and a
+  compact list of sample rows are drawn once, in the same technical desk
+  language as the rest of the app.
+- **Install confirmation**: checking for an update only reports the result. The
+  result sheet asks before installing anything, and the Flatpak path keeps its
+  command-only guidance.
 - **Green brand & accent system**: the app now wears Funnel's colour, taken
   from the project website (`#a3e635` on dark, `#466f0d` on light), applied to
   buttons, switches, selections and focus rings via an app stylesheet
@@ -27,9 +36,9 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
   sections), with **drag-and-drop reordering** (and ▲▼ in each rule's `⋯` menu
   for the keyboard); the presets moved into the **Add Rule** split button, and
   the page's `⋯` menu now holds the advanced editor plus the new import/export.
-- **Overlap warnings**: rules that can never match — a duplicated extension, or
-  anything below a catch-all — now raise a banner that names the rule and says
-  why, instead of silently doing nothing.
+- **Overlap warnings**: rules that can never match, such as a duplicated
+  extension or anything below a catch-all, now raise a banner that names the
+  rule and says why, instead of silently doing nothing.
 - **Preview a folder** from the rules page: counts how many top-level files
   each rule would move, before you press Sort Now.
 - **Rule import & export** (plain JSON) from the rules page, sharing the same
@@ -37,25 +46,30 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
   *Append* (same-named rules are overwritten).
 
 ### Fixed
+- **Sort Now** honours the saved Dry-run by default setting and names the
+  effective mode in its result toast.
+- **Undo** shows a preview with the affected count and first file before it
+  moves anything. Undo actions stay disabled while a sweep is running, and the
+  sweep guard now lives in one controller shared by the menu, shortcut and tray.
+- **Destructive actions ask first**: resetting to defaults, removing a folder,
+  replacing a rule sheet and removing a rule now name the target. Rule export
+  writes through a temporary file instead of truncating the destination.
 - The wizard's **"Never match names matching"** field is now validated: an
   invalid exclusion regex is rejected up front instead of being saved and then
   silently ignored by the engine.
 - **"Sort Now"** can no longer run two sweeps at once when triggered from the
   menu, the `Ctrl+N` shortcut or the tray while a sweep is already running.
-- The **sort preview** on the wizard's last step painted a fixed lime whichever
-  accent was selected. It now takes its colours from the active accent, using
-  the light or dark variant that matches the current colour scheme.
+- Hand-painted accents, including the static proof and rule colour dots, follow
+  the active accent and its light or dark variant instead of a fixed lime.
 
 ### Changed
-- **Rebuilt the app shell**: the hand-rolled sidebar is gone. Folders, Rules
-  and Activity are now header tabs (`Adw.ViewSwitcher`), collapsing to a bottom
-  switcher bar on narrow windows, over an animated view stack; Settings moved
-  into a proper **Preferences dialog** (`Ctrl+,`). Content is centred in an
-  `Adw.Clamp`, and page changes animate.
+- **GUI rebuilt from scratch**: `gnu_sorter/gui.py` is now a thin compatibility
+  facade over the `gnu_sorter/gui_shell/` package. The header tabs are replaced
+  by a context rail and three sections, and the six-step wizard is now a
+  four-step draft: Catch, Destination, Conditions, Proof. Engine, config,
+  watcher, journal and updater behaviour is unchanged.
 - **App icon is now green** to match the brand, regenerated (SVG, every PNG
   size, the ICO and the website images) from `data/icons/gnu-sorter.svg`.
-- The wizard's "files flow into the folder" animation now flows into a green
-  folder.
 - **Visual restyle**: the app chrome now matches the project website's quiet
   technical-desk look. Hairline rules replace the soft accent glow on hover,
   small structural labels (section eyebrows, row indices, row metadata) are set

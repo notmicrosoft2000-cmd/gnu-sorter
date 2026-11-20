@@ -1,23 +1,16 @@
-/* Funnel — application stylesheet (codename: gnu-sorter)
- * ------------------------------------------------------
- * The accent colours themselves are injected at runtime by the app (see
- * apply_color_scheme in gui.py) so the user can follow the desktop or pick a
- * Funnel colour. Everything else here is cosmetic polish on top of
- * libadwaita, and every rule is safe to drop if a future libadwaita adds its
- * own equivalent.
+/* Funnel application stylesheet.
  *
- * The house style is a quiet technical desk: hairline rules instead of
- * shadows, monospace for small structural labels, a single accent, tight
- * corners. */
+ * The desk is built from libadwaita surfaces and hairlines. The accent is
+ * injected at runtime by the theme module, so the user's desktop accent stays
+ * in charge when that is selected. Everything stays flat and still.
+ */
 
-/* The brand mark uses the accent. */
+/* The mark and small structural bits borrow the active accent. */
 .funnel-brand {
   color: @accent_color;
 }
 
-/* Small structural labels — section eyebrows, field captions, row metadata
- * — speak in monospace, the way the project's own plates annotate their
- * parts. */
+/* Section captions, field captions and timestamps. */
 .funnel-eyebrow {
   font-family: monospace;
   font-size: 0.78em;
@@ -26,26 +19,80 @@
   color: alpha(currentColor, 0.72);
 }
 
-/* A row's position number, in the accent. */
+/* Two digit positions and rule numbers. */
 .funnel-index {
   font-family: monospace;
+  font-size: 0.9em;
   letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
   color: @accent_color;
 }
 
-/* Interactive cards (wizard recipe tiles, ...) sit on a hairline rule and
- * take a flat accent wash on hover — no lift, no glow. */
-.funnel-card {
-  border: 1px solid alpha(currentColor, 0.14);
+/* A quiet surface for rule sheets, filters and proof tables. */
+.funnel-plate {
+  background-color: @card_bg_color;
+  border: 1px solid @border_color;
   border-radius: 4px;
-  transition: border-color 140ms ease, background-color 140ms ease;
-}
-.funnel-card:hover {
-  border-color: alpha(@accent_color, 0.5);
-  background-color: alpha(@accent_color, 0.08);
+  padding: 12px;
 }
 
-/* Empty-state illustrations use the brand colour and hold still. */
+/* The rail is a divider, not a second window. Only the current row gets a
+ * flat accent wash. */
+.funnel-rail {
+  background-color: transparent;
+  border-right: 1px solid @border_color;
+}
+.funnel-rail .funnel-rail-current {
+  background-color: alpha(@accent_color, 0.12);
+  border-radius: 4px;
+}
+.funnel-rail .funnel-rail-current .funnel-index {
+  color: @accent_color;
+}
+
+/* A rule row keeps its own hairline. The accent marker appears only for the
+ * active or focused row, and stays a two pixel flat line. */
+.funnel-rule {
+  border-left: 2px solid transparent;
+}
+.funnel-rule:selected,
+.funnel-rule:focus-within {
+  border-left-color: @accent_color;
+}
+
+/* Static count proof: mono numerals, hairline separators, accent fill. */
+.funnel-proof {
+  background-color: @card_bg_color;
+  border: 1px solid @border_color;
+  border-radius: 4px;
+  padding: 12px;
+}
+.funnel-proof-count {
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  color: @accent_color;
+}
+.funnel-proof-bar {
+  background-color: alpha(currentColor, 0.08);
+  color: @accent_bg_color;
+  border-radius: 4px;
+}
+
+/* Empty states hold still and use the accent for their icon only. */
 .funnel-empty image {
   color: @accent_color;
+}
+.funnel-empty label {
+  color: alpha(currentColor, 0.72);
+}
+
+/* Kept for the starting-point buttons in the rule draft. */
+.funnel-card {
+  background-color: @card_bg_color;
+  border: 1px solid @border_color;
+  border-radius: 6px;
+}
+.funnel-card:hover {
+  background-color: alpha(@accent_color, 0.08);
+  border-color: @accent_color;
 }
