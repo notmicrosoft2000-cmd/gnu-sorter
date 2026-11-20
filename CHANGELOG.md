@@ -46,6 +46,9 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
   *Append* (same-named rules are overwritten).
 
 ### Fixed
+- Python wheels and source archives now include `gnu_sorter/brand.css`, so an
+  installed copy keeps its stylesheet. The release workflow builds and attaches
+  both packages on a `v*` tag.
 - **Sort Now** honours the saved Dry-run by default setting and names the
   effective mode in its result toast.
 - **Undo** shows a preview with the affected count and first file before it

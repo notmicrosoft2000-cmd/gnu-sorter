@@ -30,3 +30,6 @@ version = {attr = "gnu_sorter.__version__"}
 [tool.setuptools.packages.find]
 include = ["gnu_sorter*"]
 exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+gnu_sorter = ["brand.css"]

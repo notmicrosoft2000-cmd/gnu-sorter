@@ -27,6 +27,11 @@ jobs:
       - name: Unit tests
         run: python -m unittest discover -s tests
 
+      - name: Build Python packages
+        run: |
+          python -m pip wheel . --no-deps -w dist
+          python -c "from setuptools import build_meta; build_meta.build_sdist('dist')"
+
       - name: Determine channel
         id: channel
         run: |
@@ -46,3 +51,5 @@ jobs:
             install.sh
             install-gnu-sorter.sh
             main.py
+            dist/*.whl
+            dist/*.tar.gz
