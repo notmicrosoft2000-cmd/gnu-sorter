@@ -1,4 +1,4 @@
-"""02 Inputs: watched folders and the background watcher."""
+"""Inputs: watched folders and the background watcher."""
 
 from __future__ import annotations
 
@@ -16,6 +16,20 @@ from ..widgets import dim, heading, listbox  # noqa: E402
 def _folder_name(path: str) -> str:
     expanded = expand(path)
     return expanded.name or str(expanded)
+
+
+def _iconed_button(label: str, icon: str, *css_classes: str) -> Gtk.Button:
+    """A button that keeps its label text and shows a symbolic icon."""
+    button = Gtk.Button()
+    box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+    box.append(Gtk.Image.new_from_icon_name(icon))
+    text = Gtk.Label(label=label, xalign=0)
+    text.set_valign(Gtk.Align.CENTER)
+    box.append(text)
+    button.set_child(box)
+    for css_class in css_classes:
+        button.add_css_class(css_class)
+    return button
 
 
 def _confirm(window, title: str, body: str, action_label: str, callback) -> None:
@@ -39,10 +53,10 @@ def build_inputs(window) -> Gtk.Widget:
     outer.set_margin_end(18)
 
     header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-    header.append(heading("02 Inputs"))
+    header.append(heading("Inputs"))
     header.append(Gtk.Box(hexpand=True))
-    add_button = Gtk.Button(label="Add folder")
-    add_button.add_css_class("suggested-action")
+    add_button = _iconed_button("Add folder", "list-add-symbolic",
+                                "suggested-action")
     add_button.connect("clicked", lambda *_: choose_folder())
     header.append(add_button)
     outer.append(header)
@@ -186,6 +200,9 @@ def build_inputs(window) -> Gtk.Widget:
                 row = Adw.ActionRow(title=_folder_name(path),
                                     subtitle=fmt(expand(path)))
                 row.set_subtitle_lines(1)
+                folder_icon = Gtk.Image.new_from_icon_name("folder-symbolic")
+                folder_icon.set_valign(Gtk.Align.CENTER)
+                row.add_prefix(folder_icon)
                 if controller.is_custom(path):
                     badge = Gtk.Label(label="Own copy", xalign=1)
                     badge.add_css_class("caption")

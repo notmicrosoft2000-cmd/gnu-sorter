@@ -16,17 +16,22 @@ from .. import APP_NAME, CREATOR, ISSUES, REPO, WEBSITE, __version__  # noqa: E4
 from ..config import PRESETS  # noqa: E402
 from ..engine import expand  # noqa: E402
 from .views import build_inputs, build_log, build_plan  # noqa: E402
-from .widgets import dim, eyebrow, index_label  # noqa: E402
+from .widgets import dim, eyebrow  # noqa: E402
 
 _SECTIONS = (
-    ("01", "rules", "Plan"),
-    ("02", "inputs", "Inputs"),
-    ("03", "activity", "Log"),
+    ("rules", "Plan"),
+    ("inputs", "Inputs"),
+    ("activity", "Log"),
 )
 _SECTION_ALIASES = {
     "plan": "rules", "rules": "rules", "sheet": "rules",
     "inputs": "inputs", "folders": "inputs",
     "log": "activity", "activity": "activity", "history": "activity",
+}
+_SECTION_ICONS = {
+    "rules": "folder-symbolic",
+    "inputs": "folder-open-symbolic",
+    "activity": "document-open-recent-symbolic",
 }
 
 
@@ -35,6 +40,20 @@ def _root_name(root: str | None) -> str:
         return "Shared defaults"
     path = expand(root)
     return path.name or str(path)
+
+
+def _iconed_button(label: str, icon: str, *css_classes: str) -> Gtk.Button:
+    """A flat button that keeps its label text and shows a symbolic icon."""
+    button = Gtk.Button()
+    box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+    box.append(Gtk.Image.new_from_icon_name(icon))
+    text = Gtk.Label(label=label, xalign=0)
+    text.set_valign(Gtk.Align.CENTER)
+    box.append(text)
+    button.set_child(box)
+    for css_class in css_classes:
+        button.add_css_class(css_class)
+    return button
 
 
 class MainWindow(Adw.ApplicationWindow):
@@ -129,7 +148,8 @@ class MainWindow(Adw.ApplicationWindow):
             banner.set_revealed(False)
             self.page_banners[name] = banner
 
-    def _rail_button(self, number: str, label: str) -> Gtk.Button:
+    def _rail_button(self, label: str,
+                     icon: str | None = None) -> Gtk.Button:
         button = Gtk.Button()
         button.add_css_class("flat")
         button.set_halign(Gtk.Align.FILL)
@@ -138,10 +158,11 @@ class MainWindow(Adw.ApplicationWindow):
         inner.set_margin_bottom(6)
         inner.set_margin_start(6)
         inner.set_margin_end(6)
-        number_label = index_label(number)
-        number_label.set_valign(Gtk.Align.CENTER)
+        if icon is not None:
+            image = Gtk.Image.new_from_icon_name(icon)
+            image.set_valign(Gtk.Align.CENTER)
+            inner.append(image)
         name_label = Gtk.Label(label=label, xalign=0, hexpand=True, ellipsize=3)
-        inner.append(number_label)
         inner.append(name_label)
         button.set_child(inner)
         return button
@@ -156,7 +177,8 @@ class MainWindow(Adw.ApplicationWindow):
         rail.set_margin_end(12)
 
         rail.append(eyebrow("Contexts"))
-        self.shared_button = self._rail_button("00", "Shared defaults")
+        self.shared_button = self._rail_button(
+            "Shared defaults", icon="emblem-default-symbolic")
         self.shared_button.connect("clicked", self._on_shared_clicked)
         rail.append(self.shared_button)
 
@@ -167,24 +189,22 @@ class MainWindow(Adw.ApplicationWindow):
         self.rules_folders.connect("row-selected", self._on_folder_selected)
         rail.append(self._rail_scroll(self.rules_folders))
 
-        add = Gtk.Button(label="+ Add folder")
-        add.add_css_class("flat")
+        add = _iconed_button("+ Add folder", "list-add-symbolic", "flat")
         add.connect("clicked", lambda *_: self._add_folder())
         rail.append(add)
 
         rail.append(Gtk.Label(label="", hexpand=True, vexpand=True))
         rail.append(eyebrow("Sections"))
         self.section_buttons: dict[str, Gtk.Button] = {}
-        for number, name, label in _SECTIONS:
-            button = self._rail_button(number, label)
+        for name, label in _SECTIONS:
+            button = self._rail_button(label, icon=_SECTION_ICONS[name])
             button.connect("clicked", lambda *_a, section=name: self.navigate(section))
             self.section_buttons[name] = button
             rail.append(button)
 
         footer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         footer.set_margin_top(12)
-        settings = Gtk.Button(label="Settings")
-        settings.add_css_class("flat")
+        settings = _iconed_button("Settings", "preferences-system-symbolic", "flat")
         settings.connect("clicked", lambda *_: self.show_preferences())
         footer.append(settings)
         self.update_status = dim("Automatic update check is on")
@@ -202,18 +222,20 @@ class MainWindow(Adw.ApplicationWindow):
         return scroll
 
     def _build_content(self) -> Gtk.Widget:
-        self.context_index = index_label("00")
-        self.context_index.set_valign(Gtk.Align.CENTER)
         self.context_name = Gtk.Label(label="Shared defaults", xalign=0,
                                       ellipsize=3, hexpand=True)
         title = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        title.append(self.context_index)
         title.append(self.context_name)
 
         header = Adw.HeaderBar()
         header.set_title_widget(title)
 
-        self.sort_btn = Gtk.Button(label="Sort")
+        sort_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        sort_box.append(Gtk.Image.new_from_icon_name("emblem-documents-symbolic"))
+        self.sort_label = Gtk.Label(label="Sort", xalign=0)
+        sort_box.append(self.sort_label)
+        self.sort_btn = Gtk.Button()
+        self.sort_btn.set_child(sort_box)
         self.sort_btn.add_css_class("suggested-action")
         self.sort_btn.set_tooltip_text("Sort every watched folder now")
         self.sort_btn.connect("clicked", self.on_sort_now)
@@ -380,7 +402,7 @@ class MainWindow(Adw.ApplicationWindow):
         try:
             roots = list(self.controller.roots() or [])
             self.rules_folders.remove_all()
-            for index, path in enumerate(roots):
+            for path in roots:
                 row = Gtk.ListBoxRow()
                 row._path = path
                 line = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -388,11 +410,8 @@ class MainWindow(Adw.ApplicationWindow):
                 line.set_margin_bottom(6)
                 line.set_margin_start(6)
                 line.set_margin_end(6)
-                number = index_label(f"{index + 1:02d}")
-                number.set_valign(Gtk.Align.CENTER)
                 name = Gtk.Label(label=_root_name(path), xalign=0,
                                  hexpand=True, ellipsize=3)
-                line.append(number)
                 line.append(name)
                 if self.controller.is_custom(path):
                     badge = Gtk.Label(label="Own", xalign=1)
@@ -409,14 +428,9 @@ class MainWindow(Adw.ApplicationWindow):
         self._refresh_section_marker()
 
     def _refresh_header(self) -> None:
-        if not hasattr(self, "context_index"):
+        if not hasattr(self, "context_name"):
             return
-        roots = list(self.controller.roots() or [])
         root = self.current_root
-        if root in roots:
-            self.context_index.set_label(f"{roots.index(root) + 1:02d}")
-        else:
-            self.context_index.set_label("00")
         self.context_name.set_label(_root_name(root))
         try:
             settings = self.controller.settings() or {}
@@ -424,7 +438,7 @@ class MainWindow(Adw.ApplicationWindow):
             checking = bool(settings.get("check_for_updates", True))
         except Exception:
             dry, checking = False, True
-        self.sort_btn.set_label("Preview" if dry else "Sort")
+        self.sort_label.set_label("Preview" if dry else "Sort")
         self.update_status.set_label(
             "Automatic update check is on" if checking
             else "Automatic update check is off")
@@ -482,8 +496,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _set_sorting(self, active: bool) -> None:
         self.sort_btn.set_sensitive(not active)
-        self.sort_btn.set_label("Sorting" if active else
-                                ("Preview" if self._sort_is_preview() else "Sort"))
+        self.sort_label.set_label("Sorting" if active else
+                                  ("Preview" if self._sort_is_preview() else "Sort"))
         self.sort_spinner.set_visible(active)
         if active:
             self.sort_spinner.start()

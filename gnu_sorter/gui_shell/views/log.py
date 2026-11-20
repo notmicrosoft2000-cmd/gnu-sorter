@@ -1,4 +1,4 @@
-"""03 Log: move history, filters and reversal."""
+"""Log: move history, filters and reversal."""
 
 from __future__ import annotations
 
@@ -29,6 +29,18 @@ def _parse_size(text: str) -> int | None:
         return None
 
 
+def _iconed_button(label: str, icon: str) -> Gtk.Button:
+    """A button that keeps its label text and shows a symbolic icon."""
+    button = Gtk.Button()
+    box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+    box.append(Gtk.Image.new_from_icon_name(icon))
+    text = Gtk.Label(label=label, xalign=0)
+    text.set_valign(Gtk.Align.CENTER)
+    box.append(text)
+    button.set_child(box)
+    return button
+
+
 def _sorter_call(window, name: str, *args, **kwargs):
     target = getattr(window.controller, name, None)
     if target is None:
@@ -50,7 +62,7 @@ def build_log(window) -> Gtk.Widget:
     outer.set_margin_end(18)
 
     header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-    header.append(heading("03 Log"))
+    header.append(heading("Log"))
     header.append(Gtk.Box(hexpand=True))
     window.activity_search = Gtk.SearchEntry(placeholder_text="Search file name")
     window.activity_search.set_width_chars(18)
@@ -122,11 +134,11 @@ def build_log(window) -> Gtk.Widget:
     outer.append(move_stack)
 
     actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-    undo_move = Gtk.Button(label="Undo last move")
+    undo_move = _iconed_button("Undo last move", "edit-undo-symbolic")
     undo_move.connect("clicked", lambda *_: undo_preview("move"))
-    undo_sweep = Gtk.Button(label="Undo last sweep")
+    undo_sweep = _iconed_button("Undo last sweep", "edit-undo-symbolic")
     undo_sweep.connect("clicked", lambda *_: undo_preview("sweep"))
-    restore = Gtk.Button(label="Restore selected filter")
+    restore = _iconed_button("Restore selected filter", "folder-symbolic")
     restore.add_css_class("suggested-action")
     restore.connect("clicked", lambda *_: restore_selected())
     for button in (undo_move, undo_sweep):

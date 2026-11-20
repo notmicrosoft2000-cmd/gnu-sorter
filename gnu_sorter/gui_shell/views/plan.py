@@ -1,4 +1,4 @@
-"""01 Plan: the ordered rule sheet for the current context."""
+"""Plan: the ordered rule sheet for the current context."""
 
 from __future__ import annotations
 
@@ -14,12 +14,12 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk  # noqa: E402
 from ...config import PRESETS, describe_rule, duplicate_rule, normalize_rule, rule_overlaps  # noqa: E402
 from ...engine import expand  # noqa: E402
 from ..proof import ProofPanel  # noqa: E402
-from ..widgets import color_dot, dim, heading, index_label, listbox, scroll  # noqa: E402
+from ..widgets import color_dot, dim, heading, listbox, scroll  # noqa: E402
 
 
 def _root_name(root: str | None) -> str:
     if not root:
-        return "00 Shared defaults"
+        return "Shared defaults"
     path = expand(root)
     return path.name or str(path)
 
@@ -41,6 +41,16 @@ def _button(icon: str, tooltip: str, callback, *args) -> Gtk.Button:
     button.set_valign(Gtk.Align.CENTER)
     button.connect("clicked", callback, *args)
     return button
+
+
+def _set_icon_with_label(button: Gtk.Button, icon: str, label: str) -> None:
+    """Keep a button's text and put a symbolic icon in front of it."""
+    box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+    box.append(Gtk.Image.new_from_icon_name(icon))
+    text = Gtk.Label(label=label, xalign=0)
+    text.set_valign(Gtk.Align.CENTER)
+    box.append(text)
+    button.set_child(box)
 
 
 def _attach_drag(window, rules_list: Gtk.ListBox, state: dict, refresh) -> None:
@@ -98,9 +108,6 @@ def _make_rule_row(window, state: dict, rule: dict, index: int, total: int,
         str(rule.get("match_name_regex") or ""),
     ]).lower()
 
-    number = index_label(f"{index + 1:02d}")
-    number.set_valign(Gtk.Align.CENTER)
-    row.add_prefix(number)
     if rule.get("color"):
         row.add_prefix(color_dot(str(rule["color"])))
 
@@ -192,13 +199,16 @@ def _make_rule_row(window, state: dict, rule: dict, index: int, total: int,
     popover_box.set_margin_bottom(6)
     popover_box.set_margin_start(6)
     popover_box.set_margin_end(6)
-    for label, action in (("Edit", lambda: window.open_advanced(root, rule)),
-                          ("Duplicate", duplicate_rule_here),
-                          ("Move up", lambda: reorder(index - 1)),
-                          ("Move down", lambda: reorder(index + 1)),
-                          ("See moves", see_moves),
-                          ("Remove", remove_rule_here)):
+    for label, action, icon in (
+            ("Edit", lambda: window.open_advanced(root, rule), None),
+            ("Duplicate", duplicate_rule_here, None),
+            ("Move up", lambda: reorder(index - 1), None),
+            ("Move down", lambda: reorder(index + 1), None),
+            ("See moves", see_moves, None),
+            ("Remove", remove_rule_here, "edit-clear-symbolic")):
         item = Gtk.Button(label=label)
+        if icon is not None:
+            _set_icon_with_label(item, icon, label)
         item.add_css_class("flat")
         item.set_halign(Gtk.Align.FILL)
         item.connect("clicked", lambda *_a, act=action: (popover.popdown(), act()))
@@ -231,7 +241,7 @@ def build_plan(window) -> Gtk.Widget:
     outer.set_margin_end(18)
 
     header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-    header.append(heading("01 Plan"))
+    header.append(heading("Plan"))
     header.append(Gtk.Box(hexpand=True))
     window.rules_search = Gtk.SearchEntry(placeholder_text="Search rules")
     window.rules_search.connect("search-changed", lambda *_: apply_search())
@@ -400,12 +410,12 @@ def build_plan(window) -> Gtk.Widget:
             custom = bool(root and controller.is_custom(root))
             if root:
                 context_label.set_label(_root_name(root))
-                context_badge.set_label("Own copy" if custom else "Uses 00 Shared defaults")
+                context_badge.set_label("Own copy" if custom else "Uses Shared defaults")
             else:
-                context_label.set_label("00 Shared defaults")
+                context_label.set_label("Shared defaults")
                 context_badge.set_label("Shared rules")
             if root and not custom:
-                inherit_banner.set_title("This folder uses 00 Shared defaults.")
+                inherit_banner.set_title("This folder uses Shared defaults.")
                 inherit_banner.set_revealed(True)
             else:
                 inherit_banner.set_revealed(False)
@@ -442,7 +452,7 @@ def build_plan(window) -> Gtk.Widget:
                 rule_stack.set_visible_child_name("empty")
                 if root is None:
                     empty.set_description(
-                        "No rules in 00 Shared defaults yet. Start from a preset "
+                        "No rules in Shared defaults yet. Start from a preset "
                         "or add a rule.")
                 else:
                     empty.set_description(
@@ -458,7 +468,7 @@ def build_plan(window) -> Gtk.Widget:
         count = len(copied)
         body = (f"{label} will replace the rules in {where} with {count} rule(s)."
                 if count else f"{label} will remove every rule in {where}."
-                if root else f"{label} will replace 00 Shared defaults with {count} rule(s).")
+                if root else f"{label} will replace Shared defaults with {count} rule(s).")
 
         def chosen(dialog, result_):
             try:
@@ -554,7 +564,7 @@ def build_plan(window) -> Gtk.Widget:
             if response != "apply":
                 return
             controller.use_shared_defaults(root)
-            window.toast("This folder now uses 00 Shared defaults")
+            window.toast("This folder now uses Shared defaults")
             refresh()
 
         _alert(window, "Use shared defaults?",

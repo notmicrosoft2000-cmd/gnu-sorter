@@ -63,6 +63,9 @@ with pre-release channels: `indev` → `alpha` → `beta` → `rc` → stable
   the active accent and its light or dark variant instead of a fixed lime.
 
 ### Changed
+- **Desk icons and cleaner labels**: the rail, sections, primary actions and
+  rule controls now use symbolic icons from the active icon theme. Numeric
+  indices and the `00` prefix are gone from the desk and the rule sheet.
 - **GUI rebuilt from scratch**: `gnu_sorter/gui.py` is now a thin compatibility
   facade over the `gnu_sorter/gui_shell/` package. The header tabs are replaced
   by a context rail and three sections, and the six-step wizard is now a
